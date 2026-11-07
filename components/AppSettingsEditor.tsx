@@ -314,7 +314,7 @@ export const AppSettingsEditor: React.FC<AppSettingsEditorProps> = ({
                             <section className="settings-section">
                                 <h4>KI-Modell</h4>
                                 <p>
-                                    Wählen Sie das Gemini-Modell für die Rechtstexte-Generierung aus. <strong>gemini-3.8-flash</strong> wird als schnellster, neuester Standard von Google empfohlen.
+                                    Wählen Sie das Gemini-Modell für die Rechtstexte-Generierung aus. <strong>gemini-3.8-flash</strong> bietet volle 1.500 kostenlose Anfragen pro Tag im Free-Tier.
                                 </p>
                                 <div className="space-y-4">
                                     <div>
@@ -324,10 +324,8 @@ export const AppSettingsEditor: React.FC<AppSettingsEditorProps> = ({
                                             onChange={(e) => setLocalModel(e.target.value)}
                                             className="modal-input bg-white"
                                         >
-                                            <option value="gemini-3.8-flash">gemini-3.8-flash (Standard – Neueste Generation, schnell & präzise)</option>
-                                            <option value="gemini-2.5-flash">gemini-2.5-flash (Preview – max. 20 Anfragen/Tag im Free-Tier)</option>
-                                            <option value="gemini-2.5-pro">gemini-2.5-pro (Für komplexe juristische Analysen)</option>
-                                            <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (Besonders sparsam)</option>
+                                            <option value="gemini-3.8-flash">gemini-3.8-flash (Standard & Empfohlen – 1.500 Anfragen/Tag)</option>
+                                            <option value="gemini-3.8-pro">gemini-3.8-pro (Für komplexe juristische Analysen)</option>
                                         </select>
                                     </div>
 

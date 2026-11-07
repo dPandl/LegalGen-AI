@@ -35,7 +35,7 @@
   - Quellcode-Konstanten und React/Vue-Komponenten (`pages/impressum.tsx`, `components/Privacy.vue`)
   - Dokumentations-Abschnitte und `i18n`-Übersetzungen (`locales/de.json`)
 
-### 🤖 KI-Generator mit Gemini 2.5 Flash
+### 🤖 KI-Generator mit Gemini 3.8 Flash
 - Erstellt passgenaue, vollständige Impressen (§ 5 DDG) und DSGVO-Datenschutzerklärungen.
 - Berücksichtigt das individuelle Entwickler- oder Unternehmensprofil sowie alle technischen Gegebenheiten des Projekts.
 - Interaktiver Chat-Assistent für Nachfragen, Korrekturen und Anpassungen in Echtzeit.

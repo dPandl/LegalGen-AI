@@ -54,8 +54,8 @@ export class LegalGenChatService {
         this.documentMode = documentMode;
         this.onModelFallback = onModelFallback;
         this.ai = new GoogleGenAI({ apiKey: apiKey });
-        // Falls ein veraltetes Modell (gemini-1.x oder gemini-2.0) übergeben wurde, auf gemini-3.8-flash migrieren
-        const normalizedModel = (!model || model.startsWith('gemini-1.') || model.startsWith('gemini-2.0'))
+        // Falls ein veraltetes Modell (gemini-1.x, gemini-2.x) übergeben wurde, auf gemini-3.8-flash migrieren
+        const normalizedModel = (!model || model.startsWith('gemini-1.') || model.startsWith('gemini-2.'))
             ? 'gemini-3.8-flash'
             : model;
         this.currentModel = normalizedModel;
