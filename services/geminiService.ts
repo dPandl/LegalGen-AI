@@ -24,6 +24,7 @@ export class LegalGenChatService {
     private ai: GoogleGenAI;
     private systemInstruction: string;
     private currentModel: string;
+    private onModelFallback?: (newModel: string, reason: string) => void;
     public documentMode: 'both' | 'impressum' | 'datenschutz';
 
     constructor(
@@ -40,13 +41,15 @@ export class LegalGenChatService {
         isCommercial?: boolean,
         existingImpressum?: string,
         existingDatenschutz?: string,
-        codeAnalysisSummary?: string
+        codeAnalysisSummary?: string,
+        onModelFallback?: (newModel: string, reason: string) => void
     ) {
         if (!apiKey) {
             throw new Error("API Key is required");
         }
 
         this.documentMode = documentMode;
+        this.onModelFallback = onModelFallback;
         this.ai = new GoogleGenAI({ apiKey: apiKey });
         this.currentModel = model || 'gemini-2.0-flash';
 
@@ -237,8 +240,10 @@ export class LegalGenChatService {
                 raw.includes('limit: 20');
 
             if (isQuota && this.currentModel !== 'gemini-2.0-flash') {
-                console.warn(`Modell ${this.currentModel} Quota erreicht, wechsle automatisch auf Fallback-Modell gemini-2.0-flash (1.500 RPD)...`);
+                const oldModel = this.currentModel;
+                console.warn(`Modell ${oldModel} Quota erreicht, wechsle automatisch auf Fallback-Modell gemini-2.0-flash (1.500 RPD)...`);
                 this.currentModel = 'gemini-2.0-flash';
+                this.onModelFallback?.('gemini-2.0-flash', `Tageskontingent für ${oldModel} im Free-Tier erreicht (20 Anfragen/Tag).`);
                 this.chat = this.ai.chats.create({
                     model: 'gemini-2.0-flash',
                     config: {

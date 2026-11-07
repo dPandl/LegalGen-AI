@@ -236,6 +236,11 @@ export default function App() {
         return savedModel;
     });
 
+    const [modelFallbackNotification, setModelFallbackNotification] = useState<{
+        newModel: string;
+        reason: string;
+    } | null>(null);
+
     // PWA Install Prompt State
     const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
     const [isStandalonePwa, setIsStandalonePwa] = useState<boolean>(() => detectInstalledPwa());
@@ -639,7 +644,12 @@ export default function App() {
                 currentProject.isCommercial,
                 currentProject.impressum,
                 currentProject.datenschutzerklaerung,
-                currentProject.codeAnalysisSummary
+                currentProject.codeAnalysisSummary,
+                (newModel, reason) => {
+                    setModel(newModel);
+                    localStorage.setItem('legalgen_model', newModel);
+                    setModelFallbackNotification({ newModel, reason });
+                }
             );
             const firstQuestion = await chatService.current.startConversation();
             setMessages([{ role: 'assistant', content: firstQuestion }]);
@@ -1448,10 +1458,14 @@ export default function App() {
                         setUserInput={setUserInput}
                         onSendMessage={handleSendMessage}
                         isLoading={isLoading}
+                        currentModel={model}
+                        fallbackNotification={modelFallbackNotification}
+                        onDismissFallbackNotification={() => setModelFallbackNotification(null)}
                         onCancel={() => {
                             setMessages([]);
                             setGeneratedTexts(null);
                             setChatProject(null);
+                            setModelFallbackNotification(null);
                             setAppState(AppState.DASHBOARD);
                         }}
                     />

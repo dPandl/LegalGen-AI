@@ -38,6 +38,9 @@ interface ChatViewProps {
     onSendMessage: (overrideMessage?: string) => void;
     isLoading: boolean;
     onCancel: () => void;
+    currentModel?: string;
+    fallbackNotification?: { newModel: string; reason: string } | null;
+    onDismissFallbackNotification?: () => void;
 }
 
 export const ConversationStep: React.FC<ChatViewProps> = ({
@@ -47,7 +50,10 @@ export const ConversationStep: React.FC<ChatViewProps> = ({
     setUserInput,
     onSendMessage,
     isLoading,
-    onCancel
+    onCancel,
+    currentModel,
+    fallbackNotification,
+    onDismissFallbackNotification
 }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -79,12 +85,39 @@ export const ConversationStep: React.FC<ChatViewProps> = ({
             </div>
 
             <div className="hub-card flex flex-col h-[72vh] max-w-4xl">
-                <div className="pb-3 mb-3 border-b border-slate-100 flex items-center justify-between">
+                <div className="pb-3 mb-3 border-b border-slate-100 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <SparklesIcon className="w-4 h-4 text-primary-600" />
-                        <span>Klicken Sie auf eine Antwortmöglichkeit oder geben Sie unten Ihre eigene Antwort ein.</span>
+                        <SparklesIcon className="w-4 h-4 text-primary-600 shrink-0" />
+                        <span className="truncate">Klicken Sie auf eine Antwortmöglichkeit oder tippen Sie unten Ihre Antwort ein.</span>
                     </div>
+                    {currentModel && (
+                        <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-sky-50 text-primary-700 inline-flex items-center gap-1.5 border border-sky-100 shrink-0">
+                            <SparklesIcon className="w-3 h-3 text-primary-600" />
+                            <span>Modell: {currentModel}</span>
+                        </span>
+                    )}
                 </div>
+
+                {fallbackNotification && (
+                    <div className="mb-3 px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-2 shrink-0">
+                        <div className="flex items-center gap-2">
+                            <span className="text-base select-none">⚡</span>
+                            <div>
+                                <strong>Automatischer Modell-Wechsel:</strong> {fallbackNotification.reason} Die Generierung läuft jetzt nahtlos mit <strong>{fallbackNotification.newModel}</strong> (1.500 Anfragen/Tag) weiter.
+                            </div>
+                        </div>
+                        {onDismissFallbackNotification && (
+                            <button
+                                type="button"
+                                onClick={onDismissFallbackNotification}
+                                className="text-amber-700 hover:text-amber-950 font-bold px-1.5 py-0.5 rounded text-sm shrink-0"
+                                title="Hinweis schließen"
+                            >
+                                ✕
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 <div className="flex-grow bg-slate-50/80 rounded-2xl p-4 overflow-y-auto space-y-4">
                     {messages.map((msg, index) => {
