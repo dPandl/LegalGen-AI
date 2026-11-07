@@ -22,6 +22,17 @@ export function formatGeminiError(err: any): string {
     return raw;
 }
 
+function isValidLegalDocumentText(text?: string): boolean {
+    if (!text || text.trim().length < 20) return false;
+    const isCode = /^\s*(import\s+|export\s+|const\s+|var\s+|function\s+|\/\*)/.test(text);
+    const hasLegalHeader = /(?:#+|\*\*)\s*(?:Impressum|Datenschutzerklärung|Angaben\s+gemäß)/i.test(text) ||
+                           /\b(?:§\s*5\s*DDG|§\s*5\s*TMG|Art\.\s*13\s*DSGVO)\b/i.test(text);
+    if (isCode && !hasLegalHeader) {
+        return false;
+    }
+    return true;
+}
+
 export class LegalGenChatService {
     private chat: Chat;
     private ai: GoogleGenAI;
@@ -79,15 +90,18 @@ export class LegalGenChatService {
             docRequestText = "für das Impressum und die Datenschutzerklärung";
         }
 
+        const validImpressum = isValidLegalDocumentText(existingImpressum) ? existingImpressum : undefined;
+        const validDatenschutz = isValidLegalDocumentText(existingDatenschutz) ? existingDatenschutz : undefined;
+
         const hasExistingDocs = Boolean(
-            (existingImpressum && existingImpressum.trim() && (documentMode === 'both' || documentMode === 'impressum')) ||
-            (existingDatenschutz && existingDatenschutz.trim() && (documentMode === 'both' || documentMode === 'datenschutz'))
+            (validImpressum && (documentMode === 'both' || documentMode === 'impressum')) ||
+            (validDatenschutz && (documentMode === 'both' || documentMode === 'datenschutz'))
         );
 
         const existingDocsSection = hasExistingDocs ? `
             BEREITS VORHANDENE DOKUMENTE IM PROJEKT:
-            ${existingImpressum && (documentMode === 'both' || documentMode === 'impressum') ? `--- Bestehendes Impressum ---\n${existingImpressum}\n` : ''}
-            ${existingDatenschutz && (documentMode === 'both' || documentMode === 'datenschutz') ? `--- Bestehende Datenschutzerklärung ---\n${existingDatenschutz}\n` : ''}
+            ${validImpressum && (documentMode === 'both' || documentMode === 'impressum') ? `--- Bestehendes Impressum ---\n${validImpressum}\n` : ''}
+            ${validDatenschutz && (documentMode === 'both' || documentMode === 'datenschutz') ? `--- Bestehende Datenschutzerklärung ---\n${validDatenschutz}\n` : ''}
             HINWEIS ZU BESTEHENDEN DOKUMENTEN: Wenn bereits ein Text vorhanden ist, bieten Sie dem Benutzer im ersten Schritt freundlich an, entweder gezielte Änderungen/Ergänzungen (z. B. neu erkannte Dienste einpflegen) am bestehenden Text vorzunehmen ODER das Dokument komplett neu zu erstellen. Wenn der Benutzer nur eine Teil-Änderung wünscht, behalten Sie den bestehenden Text als Basis bei und arbeiten Sie die Änderung sauber ein!
         ` : '';
 
@@ -272,10 +286,20 @@ export class LegalGenChatService {
         }
     }
 
+    private getThinkingConfig() {
+        const isGemini3 = this.currentModel.includes('3.') || this.currentModel.includes('3-') || this.currentModel.includes('gemini-3');
+        return isGemini3
+            ? { thinkingLevel: ThinkingLevel.LOW }
+            : { thinkingBudget: 0 };
+    }
+
     async startConversation(): Promise<string> {
         return await this.executeWithFallback(async () => {
             const response = await this.chat.sendMessage({
-                message: "Bitte begrüßen Sie den Benutzer kurz, fassen Sie die erkannten Projektdaten prägnant zusammen und stellen Sie die erste Frage (mit klickbaren <OPTIONS> am Ende)."
+                message: "Bitte begrüßen Sie den Benutzer kurz, fassen Sie die erkannten Projektdaten prägnant zusammen und stellen Sie die erste Frage (mit klickbaren <OPTIONS> am Ende).",
+                config: {
+                    thinkingConfig: this.getThinkingConfig()
+                }
             });
             return response.text || '';
         });
@@ -283,7 +307,12 @@ export class LegalGenChatService {
 
     async sendMessage(message: string): Promise<string> {
         return await this.executeWithFallback(async () => {
-            const response = await this.chat.sendMessage({ message });
+            const response = await this.chat.sendMessage({
+                message,
+                config: {
+                    thinkingConfig: this.getThinkingConfig()
+                }
+            });
             return response.text || '';
         });
     }

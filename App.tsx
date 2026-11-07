@@ -547,6 +547,45 @@ export default function App() {
         }
     }, [projects]);
 
+    // Automatische Bereinigung von fälschlicherweise als Impressum/Datenschutz gespeichertem Quellcode
+    useEffect(() => {
+        const cleanupKey = 'legalgen_cleanup_bogus_legal_code_v1';
+        if (localStorage.getItem(cleanupKey) !== 'true' && projects.length > 0) {
+            let changed = false;
+            const isBogus = (txt?: string) => {
+                if (!txt || txt.trim().length < 20) return false;
+                const isCode = /^\s*(import\s+|export\s+|const\s+|var\s+|function\s+|\/\*)/.test(txt);
+                const hasLegalHeader = /(?:#+|\*\*)\s*(?:Impressum|Datenschutzerklärung|Angaben\s+gemäß)/i.test(txt) ||
+                                       /\b(?:§\s*5\s*DDG|§\s*5\s*TMG|Art\.\s*13\s*DSGVO)\b/i.test(txt);
+                return isCode && !hasLegalHeader;
+            };
+
+            const updated = projects.map(p => {
+                let pChanged = false;
+                let newImp = p.impressum;
+                let newDs = p.datenschutzerklaerung;
+                if (isBogus(newImp)) {
+                    newImp = '';
+                    pChanged = true;
+                }
+                if (isBogus(newDs)) {
+                    newDs = '';
+                    pChanged = true;
+                }
+                if (pChanged) {
+                    changed = true;
+                    return { ...p, impressum: newImp, datenschutzerklaerung: newDs };
+                }
+                return p;
+            });
+
+            if (changed) {
+                saveProjectsToStorage(updated);
+            }
+            localStorage.setItem(cleanupKey, 'true');
+        }
+    }, [projects]);
+
     const handleToggleCommercial = (project: Project, e: React.MouseEvent) => {
         e.stopPropagation();
         const updated = projects.map(p =>
