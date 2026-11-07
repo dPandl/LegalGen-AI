@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" sizes="32x32" href="./icon-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="./icon-64.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0284c7" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="LegalGen AI" />
+    <meta name="description" content="LegalGen AI – Lokaler KI-Generator für Impressum (§ 5 DDG) und Datenschutzerklärung (Art. 13 DSGVO) mit automatischem Projekt-Ordner-Scan." />
+    <title>LegalGen AI – Impressum &amp; Datenschutz KI-Assistent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'primary': {
+                '50': 'var(--color-sky-50)',
+                '100': 'var(--color-sky-100)',
+                '200': 'var(--color-sky-200)',
+                '300': 'var(--color-sky-300)',
+                '400': 'var(--color-sky-400)',
+                '500': 'var(--color-sky-500)',
+                '600': 'var(--color-primary)',
+                '700': 'var(--color-primary-hover)',
+                '800': 'var(--color-sky-800)',
+                '900': 'var(--color-sky-900)',
+                '950': 'var(--color-sky-900)',
+              },
+              'sky': {
+                '50': 'var(--color-sky-50)',
+                '100': 'var(--color-sky-100)',
+                '200': 'var(--color-sky-200)',
+                '300': 'var(--color-sky-300)',
+                '400': 'var(--color-sky-400)',
+                '500': 'var(--color-sky-500)',
+                '600': 'var(--color-primary)',
+                '700': 'var(--color-primary-hover)',
+                '800': 'var(--color-sky-800)',
+                '900': 'var(--color-sky-900)',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="./theme.css" />
+  </head>
+  <body class="bg-[#e9edf3] text-slate-900 antialiased">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

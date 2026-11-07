@@ -1,0 +1,7 @@
+{
+  "name": "Impressum Generator Pro",
+  "description": "An application that analyzes legal text for Impressum requirements, generates a form for user data, and then creates a complete Impressum text based on the provided information.",
+  "requestFramePermissions": [],
+  "prompt": "",
+  "majorCapabilities": []
+}
