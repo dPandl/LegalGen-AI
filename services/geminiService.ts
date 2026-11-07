@@ -1,4 +1,4 @@
-import { GoogleGenAI, Chat } from "@google/genai";
+import { GoogleGenAI, Chat, ThinkingLevel } from "@google/genai";
 import type { UserProfile } from '../types';
 import { DDG_PARAGRAPH_5_TEXT, DSGVO_ART_13_TEXT } from '../constants';
 
@@ -168,10 +168,16 @@ export class LegalGenChatService {
 
         this.systemInstruction = systemInstruction;
 
+        const isGemini3 = this.currentModel.includes('3.') || this.currentModel.includes('3-') || this.currentModel.includes('gemini-3');
+        const thinkingConfig = isGemini3
+            ? { thinkingLevel: ThinkingLevel.LOW }
+            : { thinkingBudget: 0 };
+
         this.chat = this.ai.chats.create({
             model: this.currentModel,
             config: {
                 systemInstruction: this.systemInstruction,
+                thinkingConfig,
             },
         });
     }
@@ -257,6 +263,7 @@ export class LegalGenChatService {
                     model: 'gemini-3.8-flash',
                     config: {
                         systemInstruction: this.systemInstruction,
+                        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
                     },
                 });
                 return await action();

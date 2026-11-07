@@ -75,7 +75,7 @@ export const ConversationStep: React.FC<ChatViewProps> = ({
             <div className="kid-area-top">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                     <nav className="app-breadcrumb" aria-label="Brotkrumen">
-                        <button type="button" onClick={onCancel} className="app-crumb" disabled={isLoading}>
+                        <button type="button" onClick={onCancel} className="app-crumb">
                             Projekte
                         </button>
                         <span className="app-crumb-sep">&rsaquo;</span>
@@ -167,12 +167,13 @@ export const ConversationStep: React.FC<ChatViewProps> = ({
                             <span className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-primary-600 text-white text-xs font-bold shadow-sm">
                                 KI
                             </span>
-                            <div className="rounded-2xl px-4 py-3 bg-white text-slate-800 border border-slate-100 rounded-tl-sm shadow-sm">
-                                <div className="flex items-center justify-center gap-1.5">
+                            <div className="rounded-2xl px-4 py-3 bg-white text-slate-800 border border-slate-100 rounded-tl-sm shadow-sm flex items-center gap-3">
+                                <div className="flex items-center justify-center gap-1.5 shrink-0">
                                     <span className="h-2 w-2 bg-primary-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
                                     <span className="h-2 w-2 bg-primary-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
                                     <span className="h-2 w-2 bg-primary-500 rounded-full animate-bounce"></span>
                                 </div>
+                                <span className="text-xs text-slate-500">Antwort wird formuliert…</span>
                             </div>
                         </div>
                     )}
@@ -203,7 +204,6 @@ export const ConversationStep: React.FC<ChatViewProps> = ({
             <button
                 type="button"
                 onClick={onCancel}
-                disabled={isLoading}
                 className="app-back"
                 aria-label="Zurück"
             >
