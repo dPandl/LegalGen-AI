@@ -274,7 +274,9 @@ export class LegalGenChatService {
 
     async startConversation(): Promise<string> {
         return await this.executeWithFallback(async () => {
-            const response = await this.chat.sendMessage({ message: "Start" });
+            const response = await this.chat.sendMessage({
+                message: "Bitte begrüßen Sie den Benutzer kurz, fassen Sie die erkannten Projektdaten prägnant zusammen und stellen Sie die erste Frage (mit klickbaren <OPTIONS> am Ende)."
+            });
             return response.text || '';
         });
     }
