@@ -3,7 +3,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import * as Diff from 'diff';
 import { AppState } from './types';
 import type { ChatMessage, UserProfile, Project, BeforeInstallPromptEvent } from './types';
-import { LegalGenChatService } from './services/geminiService';
+import { LegalGenChatService, formatGeminiError } from './services/geminiService';
 import {
     tryAutoRescanProjectFolder,
     evaluateCookieBannerStatus,
@@ -228,10 +228,10 @@ export default function App() {
     const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('legalgen_api_key') || '');
     const [isKeyLoaded, setIsKeyLoaded] = useState<boolean>(true);
     const [model, setModel] = useState<string>(() => {
-        const savedModel = localStorage.getItem('legalgen_model') || 'gemini-2.5-flash';
+        const savedModel = localStorage.getItem('legalgen_model') || 'gemini-2.0-flash';
         if (savedModel.startsWith('gemini-1.5')) {
-            localStorage.setItem('legalgen_model', 'gemini-2.5-flash');
-            return 'gemini-2.5-flash';
+            localStorage.setItem('legalgen_model', 'gemini-2.0-flash');
+            return 'gemini-2.0-flash';
         }
         return savedModel;
     });
@@ -645,7 +645,7 @@ export default function App() {
             setMessages([{ role: 'assistant', content: firstQuestion }]);
         } catch (err: any) {
             console.error(err);
-            setError(err.message || 'Fehler beim Starten des Gesprächs. Bitte API-Key prüfen.');
+            setError(formatGeminiError(err));
             setChatProject(null);
             setAppState(AppState.DASHBOARD);
         } finally {
@@ -677,7 +677,7 @@ export default function App() {
             }
         } catch (err) {
             console.error(err);
-            const errorMessage = 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.';
+            const errorMessage = formatGeminiError(err);
             setError(errorMessage);
             setMessages(prev => [...prev, { role: 'assistant', content: errorMessage }]);
         } finally {

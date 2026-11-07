@@ -2,9 +2,29 @@ import { GoogleGenAI, Chat } from "@google/genai";
 import type { UserProfile } from '../types';
 import { DDG_PARAGRAPH_5_TEXT, DSGVO_ART_13_TEXT } from '../constants';
 
+export function formatGeminiError(err: any): string {
+    const raw = err?.message || String(err || '');
+    if (raw.includes('429') || raw.includes('RESOURCE_EXHAUSTED') || raw.includes('quota') || raw.includes('limit: 20')) {
+        return 'Das Kontingent für das gewählte Modell im kostenlosen Free-Tier von Google AI Studio wurde erreicht (z. B. 20 Anfragen/Tag bei gemini-2.5-flash). Tipp: Wechseln Sie in den Einstellungen auf „gemini-2.0-flash“ (1.500 kostenlose Anfragen/Tag) oder nutzen Sie einen Key mit Abrechnung.';
+    }
+    if (raw.includes('API_KEY_INVALID') || raw.includes('API key not valid')) {
+        return 'Ungültiger Google Gemini API-Key. Bitte prüfen Sie den Key in den Einstellungen.';
+    }
+    try {
+        const parsed = JSON.parse(raw);
+        if (parsed?.error?.message) {
+            return parsed.error.message;
+        }
+    } catch {}
+    return raw;
+}
+
 export class LegalGenChatService {
     private chat: Chat;
-    private documentMode: 'both' | 'impressum' | 'datenschutz';
+    private ai: GoogleGenAI;
+    private systemInstruction: string;
+    private currentModel: string;
+    public documentMode: 'both' | 'impressum' | 'datenschutz';
 
     constructor(
         projectName: string,
@@ -27,8 +47,8 @@ export class LegalGenChatService {
         }
 
         this.documentMode = documentMode;
-
-        const ai = new GoogleGenAI({ apiKey: apiKey });
+        this.ai = new GoogleGenAI({ apiKey: apiKey });
+        this.currentModel = model || 'gemini-2.0-flash';
 
         const baseDdgText = ddgText || DDG_PARAGRAPH_5_TEXT;
         const baseDsgvoText = dsgvoText || DSGVO_ART_13_TEXT;
@@ -136,13 +156,12 @@ export class LegalGenChatService {
                - Wenn Sie am Ende der Datenschutzerklärung oder des Impressums eine Datums- oder Standangabe setzen, verwenden Sie IMMER den aktuellen Monat und das aktuelle Jahr: „Stand: ${currentMonthYear}“. Niemals veraltete Jahreszahlen aus der Vergangenheit einsetzen!
         `;
 
-        // Fallback für veraltete Gemini-1.5-Modellnamen aus älteren Einstellungen
-        const safeModel = (!model || model.startsWith('gemini-1.5')) ? 'gemini-2.5-flash' : model;
+        this.systemInstruction = systemInstruction;
 
-        this.chat = ai.chats.create({
-            model: safeModel,
+        this.chat = this.ai.chats.create({
+            model: this.currentModel,
             config: {
-                systemInstruction: systemInstruction,
+                systemInstruction: this.systemInstruction,
             },
         });
     }
@@ -206,13 +225,43 @@ export class LegalGenChatService {
         };
     }
 
+    private async executeWithFallback(action: () => Promise<any>): Promise<any> {
+        try {
+            return await action();
+        } catch (err: any) {
+            const raw = err?.message || String(err || '');
+            const isQuota =
+                raw.includes('429') ||
+                raw.includes('RESOURCE_EXHAUSTED') ||
+                raw.includes('quota') ||
+                raw.includes('limit: 20');
+
+            if (isQuota && this.currentModel !== 'gemini-2.0-flash') {
+                console.warn(`Modell ${this.currentModel} Quota erreicht, wechsle automatisch auf Fallback-Modell gemini-2.0-flash (1.500 RPD)...`);
+                this.currentModel = 'gemini-2.0-flash';
+                this.chat = this.ai.chats.create({
+                    model: 'gemini-2.0-flash',
+                    config: {
+                        systemInstruction: this.systemInstruction,
+                    },
+                });
+                return await action();
+            }
+            throw err;
+        }
+    }
+
     async startConversation(): Promise<string> {
-        const response = await this.chat.sendMessage({ message: "Start" });
-        return response.text || '';
+        return await this.executeWithFallback(async () => {
+            const response = await this.chat.sendMessage({ message: "Start" });
+            return response.text || '';
+        });
     }
 
     async sendMessage(message: string): Promise<string> {
-        const response = await this.chat.sendMessage({ message });
-        return response.text || '';
+        return await this.executeWithFallback(async () => {
+            const response = await this.chat.sendMessage({ message });
+            return response.text || '';
+        });
     }
 }
