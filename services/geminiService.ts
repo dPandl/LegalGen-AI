@@ -5,10 +5,13 @@ import { DDG_PARAGRAPH_5_TEXT, DSGVO_ART_13_TEXT } from '../constants';
 export function formatGeminiError(err: any): string {
     const raw = err?.message || String(err || '');
     if (raw.includes('429') || raw.includes('RESOURCE_EXHAUSTED') || raw.includes('quota') || raw.includes('limit: 20')) {
-        return 'Das Kontingent für das gewählte Modell im kostenlosen Free-Tier von Google AI Studio wurde erreicht (z. B. 20 Anfragen/Tag bei gemini-2.5-flash). Tipp: Wechseln Sie in den Einstellungen auf „gemini-2.0-flash“ (1.500 kostenlose Anfragen/Tag) oder nutzen Sie einen Key mit Abrechnung.';
+        return 'Das Kontingent für das gewählte Modell im kostenlosen Free-Tier von Google AI Studio wurde erreicht. Tipp: Nutzen Sie „gemini-3.8-flash“ oder hinterlegen Sie einen API-Key mit Abrechnung.';
     }
     if (raw.includes('API_KEY_INVALID') || raw.includes('API key not valid')) {
         return 'Ungültiger Google Gemini API-Key. Bitte prüfen Sie den Key in den Einstellungen.';
+    }
+    if (raw.includes('no longer available') || raw.includes('not found')) {
+        return 'Das gewählte Modell ist nicht mehr verfügbar. Die App wurde automatisch auf das aktuelle „gemini-3.8-flash“ umgestellt.';
     }
     try {
         const parsed = JSON.parse(raw);
@@ -51,7 +54,11 @@ export class LegalGenChatService {
         this.documentMode = documentMode;
         this.onModelFallback = onModelFallback;
         this.ai = new GoogleGenAI({ apiKey: apiKey });
-        this.currentModel = model || 'gemini-2.0-flash';
+        // Falls ein veraltetes Modell (gemini-1.x oder gemini-2.0) übergeben wurde, auf gemini-3.8-flash migrieren
+        const normalizedModel = (!model || model.startsWith('gemini-1.') || model.startsWith('gemini-2.0'))
+            ? 'gemini-3.8-flash'
+            : model;
+        this.currentModel = normalizedModel;
 
         const baseDdgText = ddgText || DDG_PARAGRAPH_5_TEXT;
         const baseDsgvoText = dsgvoText || DSGVO_ART_13_TEXT;
@@ -233,19 +240,21 @@ export class LegalGenChatService {
             return await action();
         } catch (err: any) {
             const raw = err?.message || String(err || '');
-            const isQuota =
+            const isUnavailableOrQuota =
                 raw.includes('429') ||
                 raw.includes('RESOURCE_EXHAUSTED') ||
                 raw.includes('quota') ||
+                raw.includes('no longer available') ||
+                raw.includes('not found') ||
                 raw.includes('limit: 20');
 
-            if (isQuota && this.currentModel !== 'gemini-2.0-flash') {
+            if (isUnavailableOrQuota && this.currentModel !== 'gemini-3.8-flash') {
                 const oldModel = this.currentModel;
-                console.warn(`Modell ${oldModel} Quota erreicht, wechsle automatisch auf Fallback-Modell gemini-2.0-flash (1.500 RPD)...`);
-                this.currentModel = 'gemini-2.0-flash';
-                this.onModelFallback?.('gemini-2.0-flash', `Tageskontingent für ${oldModel} im Free-Tier erreicht (20 Anfragen/Tag).`);
+                console.warn(`Modell ${oldModel} nicht verfügbar oder Quota erreicht, wechsle automatisch auf Standard gemini-3.8-flash...`);
+                this.currentModel = 'gemini-3.8-flash';
+                this.onModelFallback?.('gemini-3.8-flash', `Modell ${oldModel} ist nicht verfügbar oder Limit erreicht.`);
                 this.chat = this.ai.chats.create({
-                    model: 'gemini-2.0-flash',
+                    model: 'gemini-3.8-flash',
                     config: {
                         systemInstruction: this.systemInstruction,
                     },

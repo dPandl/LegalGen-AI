@@ -314,7 +314,7 @@ export const AppSettingsEditor: React.FC<AppSettingsEditorProps> = ({
                             <section className="settings-section">
                                 <h4>KI-Modell</h4>
                                 <p>
-                                    Wählen Sie das Gemini-Modell für die Rechtstexte-Generierung aus. <strong>gemini-2.0-flash</strong> wird im kostenlosen Free-Tier empfohlen (1.500 Anfragen/Tag im Vergleich zu nur 20 bei 2.5).
+                                    Wählen Sie das Gemini-Modell für die Rechtstexte-Generierung aus. <strong>gemini-3.8-flash</strong> wird als schnellster, neuester Standard von Google empfohlen.
                                 </p>
                                 <div className="space-y-4">
                                     <div>
@@ -324,9 +324,8 @@ export const AppSettingsEditor: React.FC<AppSettingsEditorProps> = ({
                                             onChange={(e) => setLocalModel(e.target.value)}
                                             className="modal-input bg-white"
                                         >
-                                            <option value="gemini-2.0-flash">gemini-2.0-flash (Empfohlen für Free-Tier – 1.500 Anfragen/Tag)</option>
-                                            <option value="gemini-2.5-flash">gemini-2.5-flash (Neueste Preview – max. 20 Anfragen/Tag im Free-Tier)</option>
-                                            <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite (Besonders schnell – 1.500 Anfragen/Tag)</option>
+                                            <option value="gemini-3.8-flash">gemini-3.8-flash (Standard – Neueste Generation, schnell & präzise)</option>
+                                            <option value="gemini-2.5-flash">gemini-2.5-flash (Preview – max. 20 Anfragen/Tag im Free-Tier)</option>
                                             <option value="gemini-2.5-pro">gemini-2.5-pro (Für komplexe juristische Analysen)</option>
                                             <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (Besonders sparsam)</option>
                                         </select>
