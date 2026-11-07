@@ -44,38 +44,36 @@ import { ResultStep } from './components/ResultStep';
 import { LegalNoticeModal } from './components/LegalNoticeModal';
 
 async function fetchExternalLawHtml(proxyPath: string, targetUrl: string): Promise<string> {
-    try {
-        const proxyRes = await fetch(proxyPath);
-        if (proxyRes.ok) {
-            const text = await proxyRes.text();
-            if (text && !text.includes('<script type="module" src="/index.tsx">')) {
-                return text;
+    const isLocalhost =
+        typeof window !== 'undefined' &&
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+    // 1. Im lokalen Entwicklungsmodus (Vite Dev-Server) den lokalen Dev-Proxy nutzen
+    if (isLocalhost && proxyPath) {
+        try {
+            const proxyRes = await fetch(proxyPath);
+            if (proxyRes.ok) {
+                const text = await proxyRes.text();
+                if (text && !text.includes('<script type="module" src="/index.tsx">')) {
+                    return text;
+                }
             }
-        }
-    } catch {}
+        } catch {}
+    }
 
-    try {
-        const directRes = await fetch(targetUrl);
-        if (directRes.ok) {
-            return await directRes.text();
-        }
-    } catch {}
-
-    try {
-        const corsProxyRes = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`);
-        if (corsProxyRes.ok) {
-            const text = await corsProxyRes.text();
-            if (text && text.length > 200) return text;
-        }
-    } catch {}
-
-    try {
-        const corsProxyRes2 = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
-        if (corsProxyRes2.ok) {
-            const text = await corsProxyRes2.text();
-            if (text && text.length > 200) return text;
-        }
-    } catch {}
+    // 2. Im Produktionsmodus (z. B. auf GitHub Pages / by-dp.de) über CORS-Proxy abrufen
+    // (Verhindert 404 auf statischem Hosting und direkte CORS-Blockaden des Browsers)
+    if (!isLocalhost) {
+        try {
+            const corsRes = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`, {
+                signal: AbortSignal.timeout(3500)
+            });
+            if (corsRes.ok) {
+                const text = await corsRes.text();
+                if (text && text.length > 200) return text;
+            }
+        } catch {}
+    }
 
     return '';
 }
