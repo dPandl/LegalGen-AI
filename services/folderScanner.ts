@@ -399,7 +399,13 @@ function extractLegalTextFromCode(code: string, type: 'impressum' | 'datenschutz
         // 4. JSX / Template-Markup in React/Vue/Svelte-Komponenten
         if (/return\s*\(|<template>/i.test(code)) {
             const parsedJsx = cleanJsxToMarkdown(code);
-            if (parsedJsx.length > 40 && /impressum|angaben\s+gemäß|vertreten\s+durch|ddg|tmg|kontakt/i.test(parsedJsx)) {
+            // Strikte Prüfung: Es muss sich tatsächlich um ein Impressum handeln (niemals auf generisches 'kontakt' matchen!)
+            const isActualImpressum =
+                /(?:#+|\*\*)\s*(?:Impressum|Imprint)/i.test(parsedJsx) ||
+                /\b(?:Angaben\s+gemäß\s+§\s*5|§\s*5\s*DDG|§\s*5\s*TMG)\b/i.test(parsedJsx) ||
+                (/\b(?:Impressum|Imprint)\b/i.test(parsedJsx) && /\b(?:Vertreten\s+durch|Umsatzsteuer-Identifikationsnummer|Haftungsausschluss|Verantwortlich\s+für\s+den\s+Inhalt)\b/i.test(parsedJsx));
+
+            if (parsedJsx.length > 80 && isActualImpressum) {
                 return parsedJsx;
             }
         }
@@ -435,7 +441,13 @@ function extractLegalTextFromCode(code: string, type: 'impressum' | 'datenschutz
         // 4. JSX / Template-Markup in React/Vue/Svelte-Komponenten
         if (/return\s*\(|<template>/i.test(code)) {
             const parsedJsx = cleanJsxToMarkdown(code);
-            if (parsedJsx.length > 60 && /datenschutz|verantwortlicher|dsgVO|privacy|personenbezogene/i.test(parsedJsx)) {
+            // Strikte Prüfung: Es muss sich tatsächlich um eine Datenschutzerklärung handeln!
+            const isActualDatenschutz =
+                /(?:#+|\*\*)\s*(?:Datenschutzerklärung|Datenschutzhinweise|Privacy\s+Policy)/i.test(parsedJsx) ||
+                (/\b(?:Datenschutzerklärung|Privacy\s+Policy)\b/i.test(parsedJsx) && /\b(?:Verantwortlicher|Betroffenenrechte|Widerruf|Art\.\s*6|DSGVO)\b/i.test(parsedJsx)) ||
+                (/\b(?:DSGVO|Datenschutz-Grundverordnung|TDDDG)\b/i.test(parsedJsx) && /\b(?:Verantwortlicher\s+im\s+Sinne|Rechte\s+der\s+betroffenen\s+Personen|Auskunftsrecht)\b/i.test(parsedJsx));
+
+            if (parsedJsx.length > 100 && isActualDatenschutz) {
                 return parsedJsx;
             }
         }
@@ -576,26 +588,18 @@ export async function detectExistingLegalDocs(
         }
     }
 
-    // 3. Konstanten in Code-Dateien (constants.tsx, constants.ts, legal.ts, etc.)
+    // 3. Konstanten in relevanten Code-Dateien (constants.tsx, constants.ts, legal.ts, etc.)
     if (!result.impressum || !result.datenschutz) {
-        const prioritizedFiles = files.filter(f => {
+        const legalCodeFiles = files.filter(f => {
             const low = f.name.toLowerCase();
             return (
-                (low.includes('constant') || low.includes('legal') || low.includes('config') || low.includes('app') || low.includes('footer') || low.includes('about')) &&
+                (low.includes('constant') || low.includes('legal') || low.includes('impressum') || low.includes('imprint') || low.includes('datenschutz') || low.includes('privacy') || low.includes('footer')) &&
                 /\.(ts|tsx|js|jsx|json)$/i.test(low) &&
                 f.size > 50 && f.size < 250 * 1024
             );
         });
 
-        const otherCodeFiles = files.filter(f =>
-            !prioritizedFiles.includes(f) &&
-            /\.(ts|tsx|js|jsx)$/i.test(f.name) &&
-            f.size > 50 && f.size < 150 * 1024
-        ).slice(0, 40);
-
-        const filesToScan = [...prioritizedFiles, ...otherCodeFiles];
-
-        for (const vf of filesToScan) {
+        for (const vf of legalCodeFiles) {
             if (result.impressum && result.datenschutz) break;
             try {
                 const content = await vf.getText();

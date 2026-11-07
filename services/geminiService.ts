@@ -18,7 +18,7 @@ export function formatGeminiError(err: any): string {
         if (parsed?.error?.message) {
             return parsed.error.message;
         }
-    } catch {}
+    } catch { }
     return raw;
 }
 
