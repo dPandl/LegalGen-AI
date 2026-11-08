@@ -783,7 +783,8 @@ export default function App() {
             setMessages([{ role: 'assistant', content: firstQuestion }]);
         } catch (err: any) {
             console.error(err);
-            setError(formatGeminiError(err));
+            const activeModel = chatService.current?.getCurrentModel();
+            setError(formatGeminiError(err, activeModel));
             setChatProject(null);
             setAppState(AppState.DASHBOARD);
         } finally {
@@ -815,9 +816,11 @@ export default function App() {
             }
         } catch (err) {
             console.error(err);
-            const errorMessage = formatGeminiError(err);
+            const activeModel = chatService.current?.getCurrentModel();
+            const errorMessage = formatGeminiError(err, activeModel);
             setError(errorMessage);
-            setMessages(prev => [...prev, { role: 'assistant', content: errorMessage }]);
+            const contentWithRetry = `${errorMessage}\n\n<OPTIONS>Erneut versuchen</OPTIONS>`;
+            setMessages(prev => [...prev, { role: 'assistant', content: contentWithRetry }]);
         } finally {
             setIsLoading(false);
         }

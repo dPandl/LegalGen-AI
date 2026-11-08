@@ -2,10 +2,14 @@ import { GoogleGenAI, Chat, ThinkingLevel } from "@google/genai";
 import type { UserProfile } from '../types';
 import { DDG_PARAGRAPH_5_TEXT, DSGVO_ART_13_TEXT } from '../constants';
 
-export function formatGeminiError(err: any): string {
+export function formatGeminiError(err: any, currentModel?: string): string {
     const raw = err?.message || String(err || '');
-    if (raw.includes('429') || raw.includes('RESOURCE_EXHAUSTED') || raw.includes('quota') || raw.includes('limit: 20')) {
-        return 'Das Kontingent für das gewählte Modell im kostenlosen Free-Tier von Google AI Studio wurde erreicht. Tipp: Nutzen Sie „gemini-3.6-flash“ (1.500 kostenlose Anfragen pro Tag) oder hinterlegen Sie einen API-Key mit Abrechnung.';
+    if (raw.includes('429') || raw.includes('RESOURCE_EXHAUSTED') || raw.includes('quota')) {
+        const isDaily = raw.includes('limit: 20') || raw.includes('limit: 1500') || raw.includes('per day');
+        if (isDaily || currentModel === 'gemini-2.5-flash') {
+            return 'Das Tageskontingent für dieses Modell im kostenlosen Free-Tier von Google AI Studio wurde erreicht. Tipp: Nutzen Sie „gemini-3.6-flash“ (1.500 kostenlose Anfragen pro Tag) oder hinterlegen Sie einen API-Key mit Abrechnung.';
+        }
+        return 'Kurze Pause: Die Minutengrenze von Google AI Studio (maximal 15 Anfragen pro Minute im kostenlosen Free-Tier) wurde kurz erreicht. Bitte warten Sie 20–30 Sekunden und klicken Sie dann einfach noch einmal auf Senden.';
     }
     if (raw.includes('API_KEY_INVALID') || raw.includes('API key not valid')) {
         return 'Ungültiger Google Gemini API-Key. Bitte prüfen Sie den Key in den Einstellungen.';
@@ -377,6 +381,10 @@ export class LegalGenChatService {
         };
     }
 
+    public getCurrentModel(): string {
+        return this.currentModel;
+    }
+
     private async executeWithFallback(action: () => Promise<any>): Promise<any> {
         try {
             return await action();
@@ -404,6 +412,22 @@ export class LegalGenChatService {
                 });
                 return await action();
             }
+
+            // Automatischer Backoff & Retry bei kurzzeitigem 15-RPM-Minutenlimit auf gemini-3.6-flash:
+            if (isUnavailableOrQuota) {
+                const isDaily = raw.includes('limit: 20') || raw.includes('limit: 1500') || raw.includes('per day');
+                if (!isDaily) {
+                    console.warn('Kurzzeitiges Minuten-Limit (15 RPM) von Google AI Studio erreicht. Warte 3,5 Sekunden und versuche es automatisch erneut...');
+                    await new Promise(resolve => setTimeout(resolve, 3500));
+                    try {
+                        return await action();
+                    } catch (retryErr: any) {
+                        console.error('Wiederholungsversuch nach Pause ebenfalls fehlgeschlagen:', retryErr);
+                        throw retryErr;
+                    }
+                }
+            }
+
             throw err;
         }
     }
