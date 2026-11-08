@@ -114,6 +114,12 @@ export class LegalGenChatService {
             Fragen Sie NIEMALS nach Design, UX, Programmierung, Zeitplan, Budget, Prioritäten oder allgemeinen Projektzielen! Das ist absolut verboten!
             Jede einzelne Frage MUSS sich direkt und ausschließlich auf rechtliche Pflichtangaben für Impressum oder Datenschutzerklärung beziehen (z. B. Hosting-Provider, Kontaktformulare, Cookies/Tracking, Analysetools, Newsletter).
 
+            VERBOT VON PLATZHALTER-ABFRAGEN (STAMMDATEN-PFLICHT):
+            - Wenn der Benutzer Name, Anschrift, E-Mail etc. im Profil hinterlegt hat, MÜSSEN Sie diese echten Daten DIREKT und automatisch für Impressum und Datenschutzerklärung einsetzen!
+            - Fragen Sie den Benutzer NIEMALS: "Wie möchten Sie die persönlichen Angaben einfügen?" oder "Sollen Standard-Platzhalter verwendet werden?".
+            - Bieten Sie NIEMALS Optionen an wie "Standard-Platzhalter verwenden (z. B. [Max Mustermann])"!
+            - Verwenden Sie in den finalen Rechtstexten NIEMALS Platzhalter in eckigen Klammern wie [Name], [Adresse] oder [Max Mustermann], wenn diese Daten im Profil vorhanden sind!
+
             Fokus dieses Gesprächs: ${modeInstruction}
 
             1. Hier sind die gesetzlichen Anforderungen:
@@ -145,11 +151,10 @@ export class LegalGenChatService {
             ${codeAnalysisSummary ? `\n=== AUTOMATISCHE QUELLCODE-ANALYSE DES PROJEKTORDNERS ===\n${codeAnalysisSummary}\n========================================================\n` : ''}
             ${existingDocsSection}
 
-            3. WICHTIG – QUELLCODE-ANALYSE & STAMMDATEN AUSNUTZEN (FRAGEN MINIMIEREN!):
-               - Wenn eine AUTOMATISCHE QUELLCODE-ANALYSE vorliegt, wissen Sie bereits genau, welche Pakete installiert sind, ob localStorage/Cookies/Login/Kontaktformulare im Code existieren und welche externen Server aufgerufen werden!
-               - FRAGEN SIE NIEMALS nach Dingen, die durch das Profil oder die Quellcode-Analyse bereits beantwortet sind (fragen Sie z. B. NICHT "Nutzen Sie Google Analytics, Kontaktformulare oder Newsletter?", wenn der Code-Scan bereits zeigt, dass diese NICHT im Code vorhanden sind!).
-               - Falls es sich um eine Privatperson handelt, stellen Sie sicher, dass geschäftsspezifische Angaben (wie Rechtsform, Handelsregister, Aufsichtsbehörde oder Vertretungsberechtigte) NICHT abgefragt werden.
-               - Wenn durch Profil + Quellcode-Scan bereits ALLE Pflichtangaben (z. B. für ein Impressum oder für eine lokale Desktop-App) vorliegen, stellen Sie GAR KEINE unnötigen Rückfragen mehr, sondern fassen Sie die erkannten Punkte direkt in Ihrer ersten Nachricht zusammen und bieten Sie sofort die Erstellung an (<OPTIONS>Ja, Rechtstexte direkt erstellen|Ich möchte noch etwas ergänzen</OPTIONS>)!
+            3. WICHTIG – QUELLCODE-ANALYSE & STAMMDATEN DIREKT NUTZEN (FRAGEN MINIMIEREN!):
+               - Alle Angaben, die im Benutzerprofil stehen (Name: ${profile.name || 'Nicht angegeben'}, Anschrift: ${profile.street || ''} ${profile.zipCode || ''} ${profile.city || ''}, E-Mail: ${profile.email || ''}), sind bereits vollständig bekannt und MÜSSEN direkt in die Rechtstexte übernommen werden!
+               - Fragen Sie NIEMALS nach diesen Daten und fragen Sie NIEMALS nach Platzhaltern!
+               - Wenn durch Profil + Quellcode-Scan bereits ALLE Pflichtangaben vorliegen (bzw. sobald der Hosting-Anbieter geklärt ist), stellen Sie GAR KEINE weiteren Rückfragen mehr, sondern fassen Sie die Daten kurz zusammen und fragen Sie direkt: "Ich habe alle notwendigen Angaben. Soll ich die Rechtstexte jetzt erstellen?" (<OPTIONS>Ja, Rechtstexte jetzt erstellen|Ich möchte noch etwas ändern</OPTIONS>)!
             
             4. Berücksichtigen Sie den Projekttyp (${projectTypes.length > 0 ? projectTypes.join(', ') : 'Webseite'}): 
                - Wenn es sich um eine Mobile App, Desktop-Software oder ein SaaS handelt, passen Sie Ihre Entwürfe automatisch an die aus dem Code erkannten Merkmale an (z. B. lokale Speicherung via localStorage/keytar, direkte API-Aufrufe vom Client, App-Store-/Download-Bereitstellung).
