@@ -324,8 +324,10 @@ export const AppSettingsEditor: React.FC<AppSettingsEditorProps> = ({
                                             onChange={(e) => setLocalModel(e.target.value)}
                                             className="modal-input bg-white"
                                         >
-                                            <option value="gemini-3.8-flash">gemini-3.8-flash (Standard & Empfohlen – 1.500 Anfragen/Tag)</option>
-                                            <option value="gemini-3.8-pro">gemini-3.8-pro (Für komplexe juristische Analysen)</option>
+                                            <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Blitzschnell: ~1–3 Sek. – Empfohlen für schnellen Dialog)</option>
+                                            <option value="gemini-3.6-flash">gemini-3.6-flash (Schnell & Ausgewogen)</option>
+                                            <option value="gemini-3.8-flash">gemini-3.8-flash (Reasoning-Modell für komplexe Fälle)</option>
+                                            <option value="gemini-3.8-pro">gemini-3.8-pro (Für anspruchsvolle juristische Analysen)</option>
                                         </select>
                                     </div>
 

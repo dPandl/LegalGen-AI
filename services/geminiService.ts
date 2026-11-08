@@ -65,9 +65,9 @@ export class LegalGenChatService {
         this.documentMode = documentMode;
         this.onModelFallback = onModelFallback;
         this.ai = new GoogleGenAI({ apiKey: apiKey });
-        // Falls ein veraltetes Modell (gemini-1.x, gemini-2.x) übergeben wurde, auf gemini-3.8-flash migrieren
+        // Falls ein veraltetes Modell (gemini-1.x, gemini-2.x) übergeben wurde, auf gemini-3.5-flash-lite migrieren
         const normalizedModel = (!model || model.startsWith('gemini-1.') || model.startsWith('gemini-2.'))
-            ? 'gemini-3.8-flash'
+            ? 'gemini-3.5-flash-lite'
             : model;
         this.currentModel = normalizedModel;
 
@@ -182,17 +182,17 @@ export class LegalGenChatService {
 
         this.systemInstruction = systemInstruction;
 
-        const isGemini3 = this.currentModel.includes('3.') || this.currentModel.includes('3-') || this.currentModel.includes('gemini-3');
-        const thinkingConfig = isGemini3
-            ? { thinkingLevel: ThinkingLevel.LOW }
-            : { thinkingBudget: 0 };
+        const thinkingConfig = this.getThinkingConfig();
+        const chatConfig: any = {
+            systemInstruction: this.systemInstruction,
+        };
+        if (thinkingConfig) {
+            chatConfig.thinkingConfig = thinkingConfig;
+        }
 
         this.chat = this.ai.chats.create({
             model: this.currentModel,
-            config: {
-                systemInstruction: this.systemInstruction,
-                thinkingConfig,
-            },
+            config: chatConfig,
         });
     }
 
@@ -268,16 +268,15 @@ export class LegalGenChatService {
                 raw.includes('not found') ||
                 raw.includes('limit: 20');
 
-            if (isUnavailableOrQuota && this.currentModel !== 'gemini-3.8-flash') {
+            if (isUnavailableOrQuota && this.currentModel !== 'gemini-3.5-flash-lite') {
                 const oldModel = this.currentModel;
-                console.warn(`Modell ${oldModel} nicht verfügbar oder Quota erreicht, wechsle automatisch auf Standard gemini-3.8-flash...`);
-                this.currentModel = 'gemini-3.8-flash';
-                this.onModelFallback?.('gemini-3.8-flash', `Modell ${oldModel} ist nicht verfügbar oder Limit erreicht.`);
+                console.warn(`Modell ${oldModel} nicht verfügbar oder Quota erreicht, wechsle automatisch auf Standard gemini-3.5-flash-lite...`);
+                this.currentModel = 'gemini-3.5-flash-lite';
+                this.onModelFallback?.('gemini-3.5-flash-lite', `Modell ${oldModel} ist nicht verfügbar oder Limit erreicht.`);
                 this.chat = this.ai.chats.create({
-                    model: 'gemini-3.8-flash',
+                    model: 'gemini-3.5-flash-lite',
                     config: {
                         systemInstruction: this.systemInstruction,
-                        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
                     },
                 });
                 return await action();
@@ -287,6 +286,9 @@ export class LegalGenChatService {
     }
 
     private getThinkingConfig() {
+        if (this.currentModel.includes('flash-lite')) {
+            return undefined;
+        }
         const isGemini3 = this.currentModel.includes('3.') || this.currentModel.includes('3-') || this.currentModel.includes('gemini-3');
         return isGemini3
             ? { thinkingLevel: ThinkingLevel.LOW }
