@@ -77,7 +77,7 @@ export const ConversationStep: React.FC<ChatViewProps> = ({
 
     return (
         <div className="w-full">
-            <div className="kid-area-top">
+            <div className="kid-area-top mb-2.5">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                     <nav className="app-breadcrumb" aria-label="Brotkrumen">
                         <button type="button" onClick={onCancel} className="app-crumb">
@@ -86,10 +86,19 @@ export const ConversationStep: React.FC<ChatViewProps> = ({
                         <span className="app-crumb-sep">&rsaquo;</span>
                         <span className="app-crumb-current">KI-Generator: {projectName}</span>
                     </nav>
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="modal-btn-secondary inline-flex items-center gap-1.5 !py-1.5 !px-3.5 !text-xs !rounded-full"
+                        title="Chat beenden und zurück zur Projektübersicht"
+                    >
+                        <ArrowLeftIcon className="w-3.5 h-3.5" />
+                        <span>Abbrechen</span>
+                    </button>
                 </div>
             </div>
 
-            <div className="hub-card flex flex-col h-[72vh] max-w-4xl">
+            <div className="hub-card flex flex-col h-[calc(100vh-120px)] w-full max-w-5xl">
                 <div className="pb-3 mb-3 border-b border-slate-100 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-xs text-slate-500">
                         <SparklesIcon className="w-4 h-4 text-primary-600 shrink-0" />
@@ -205,16 +214,6 @@ export const ConversationStep: React.FC<ChatViewProps> = ({
                     </button>
                 </div>
             </div>
-
-            <button
-                type="button"
-                onClick={onCancel}
-                className="app-back"
-                aria-label="Zurück"
-            >
-                <ArrowLeftIcon className="w-5 h-5 shrink-0" />
-                <span className="app-back-text">Abbrechen</span>
-            </button>
         </div>
     );
 };
