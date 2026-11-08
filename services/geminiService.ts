@@ -114,7 +114,9 @@ export class LegalGenChatService {
             Fragen Sie NIEMALS nach Design, UX, Programmierung, Zeitplan, Budget, Prioritäten oder allgemeinen Projektzielen! Das ist absolut verboten!
             Jede einzelne Frage MUSS sich direkt und ausschließlich auf rechtliche Pflichtangaben für Impressum oder Datenschutzerklärung beziehen (z. B. Hosting-Provider, Kontaktformulare, Cookies/Tracking, Analysetools, Newsletter).
 
-            VERBOT VON PLATZHALTER-ABFRAGEN (STAMMDATEN-PFLICHT):
+            VERBOT VON PLATZHALTER- & DOPPEL-ABFRAGEN (STAMMDATEN & NUTZUNGSTYP FEST VORGEGEBEN):
+            - Der Nutzungstyp des Projekts steht bereits unumstößlich fest: ${isCommercial !== false ? 'Kommerziell / Gewerblich' : 'Rein privat / hobbymäßig (komplett gratis)'}!
+            - Fragen Sie den Benutzer NIEMALS: "Wird das Projekt rein privat betrieben oder hat es einen geschäftlichen/gewerblichen Hintergrund?" oder ähnliches! Das ist bereits fest im Projekt hinterlegt und absolut tabu als Frage!
             - Wenn der Benutzer Name, Anschrift, E-Mail etc. im Profil hinterlegt hat, MÜSSEN Sie diese echten Daten DIREKT und automatisch für Impressum und Datenschutzerklärung einsetzen!
             - Fragen Sie den Benutzer NIEMALS: "Wie möchten Sie die persönlichen Angaben einfügen?" oder "Sollen Standard-Platzhalter verwendet werden?".
             - Bieten Sie NIEMALS Optionen an wie "Standard-Platzhalter verwenden (z. B. [Max Mustermann])"!
@@ -152,9 +154,9 @@ export class LegalGenChatService {
             ${existingDocsSection}
 
             3. WICHTIG – QUELLCODE-ANALYSE & STAMMDATEN DIREKT NUTZEN (FRAGEN MINIMIEREN!):
-               - Alle Angaben, die im Benutzerprofil stehen (Name: ${profile.name || 'Nicht angegeben'}, Anschrift: ${profile.street || ''} ${profile.zipCode || ''} ${profile.city || ''}, E-Mail: ${profile.email || ''}), sind bereits vollständig bekannt und MÜSSEN direkt in die Rechtstexte übernommen werden!
-               - Fragen Sie NIEMALS nach diesen Daten und fragen Sie NIEMALS nach Platzhaltern!
-               - Wenn durch Profil + Quellcode-Scan bereits ALLE Pflichtangaben vorliegen (bzw. sobald der Hosting-Anbieter geklärt ist), stellen Sie GAR KEINE weiteren Rückfragen mehr, sondern fassen Sie die Daten kurz zusammen und fragen Sie direkt: "Ich habe alle notwendigen Angaben. Soll ich die Rechtstexte jetzt erstellen?" (<OPTIONS>Ja, Rechtstexte jetzt erstellen|Ich möchte noch etwas ändern</OPTIONS>)!
+               - Alle Angaben, die im Benutzerprofil stehen (Name: ${profile.name || 'Nicht angegeben'}, Anschrift: ${profile.street || ''} ${profile.zipCode || ''} ${profile.city || ''}, E-Mail: ${profile.email || ''}), sowie der Nutzungstyp (${isCommercial !== false ? 'Kommerziell / Gewerblich' : 'Rein privat / hobbymäßig (gratis)'}) sind bereits vollständig bekannt und MÜSSEN direkt in die Rechtstexte übernommen werden!
+               - Fragen Sie NIEMALS nach diesen Daten, NIEMALS nach privat vs. gewerblich und fragen Sie NIEMALS nach Platzhaltern!
+               - Sobald der Hosting-Anbieter geklärt ist (oder wenn es rein lokal läuft), liegen ALLE notwendigen Fakten vor! Stellen Sie dann GAR KEINE weiteren Rückfragen mehr, sondern fassen Sie die Daten kurz zusammen und fragen Sie direkt: "Ich habe alle notwendigen Angaben. Soll ich die Rechtstexte jetzt erstellen?" (<OPTIONS>Ja, Rechtstexte jetzt erstellen|Ich möchte noch etwas ändern</OPTIONS>)!
             
             4. Berücksichtigen Sie den Projekttyp (${projectTypes.length > 0 ? projectTypes.join(', ') : 'Webseite'}): 
                - Wenn es sich um eine Mobile App, Desktop-Software oder ein SaaS handelt, passen Sie Ihre Entwürfe automatisch an die aus dem Code erkannten Merkmale an (z. B. lokale Speicherung via localStorage/keytar, direkte API-Aufrufe vom Client, App-Store-/Download-Bereitstellung).
