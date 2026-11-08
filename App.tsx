@@ -6,6 +6,7 @@ import type { ChatMessage, UserProfile, Project, BeforeInstallPromptEvent } from
 import { LegalGenChatService, formatGeminiError } from './services/geminiService';
 import {
     tryAutoRescanProjectFolder,
+    rescanProjectFolder,
     evaluateCookieBannerStatus,
     selectAndScanWorkspaceRoot,
     saveProjectsToIDB,
@@ -586,6 +587,94 @@ export default function App() {
         }
     }, [projects]);
 
+    // Automatisches Nachladen von erkannten Rechtstexten für lokal verknüpfte Projekte
+    const checkedDocsProjectIdsRef = useRef<Set<string>>(new Set());
+    useEffect(() => {
+        const candidateProjects = projects.filter(
+            p => p.projectPath && (!p.impressum || !p.datenschutzerklaerung) && !checkedDocsProjectIdsRef.current.has(p.id)
+        );
+        if (candidateProjects.length === 0) return;
+
+        let isMounted = true;
+        const checkExistingDocs = async () => {
+            let updatedList = [...projects];
+            let hasChanges = false;
+
+            for (const proj of candidateProjects) {
+                checkedDocsProjectIdsRef.current.add(proj.id);
+                if (!isMounted) break;
+                try {
+                    const scan = await tryAutoRescanProjectFolder(proj.projectPath!, true);
+                    if (scan && (scan.detectedImpressum || scan.detectedDatenschutz)) {
+                        updatedList = updatedList.map(item => {
+                            if (item.id === proj.id) {
+                                const newImp = item.impressum || scan.detectedImpressum || '';
+                                const newDs = item.datenschutzerklaerung || scan.detectedDatenschutz || '';
+                                if (newImp !== item.impressum || newDs !== item.datenschutzerklaerung) {
+                                    hasChanges = true;
+                                    return {
+                                        ...item,
+                                        impressum: newImp,
+                                        datenschutzerklaerung: newDs,
+                                        detectedServices: scan.detectedServices || item.detectedServices,
+                                        codeAnalysisSummary: scan.codeAnalysisSummary || item.codeAnalysisSummary,
+                                        iconDataUrl: scan.iconDataUrl || item.iconDataUrl
+                                    };
+                                }
+                            }
+                            return item;
+                        });
+                    }
+                } catch {
+                    // Stille Ignorierung bei fehlender Berechtigung
+                }
+            }
+
+            if (hasChanges && isMounted) {
+                setProjects(updatedList);
+                saveProjectsToStorage(updatedList);
+            }
+        };
+
+        checkExistingDocs();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [projects]);
+
+    const [rescanningProjectId, setRescanningProjectId] = useState<string | null>(null);
+
+    const handleRescanCardProject = async (project: Project) => {
+        if (!project.projectPath) return;
+        setRescanningProjectId(project.id);
+        try {
+            const scan = await rescanProjectFolder(project.projectPath);
+            if (scan) {
+                const updatedList = projects.map(p => {
+                    if (p.id === project.id) {
+                        return {
+                            ...p,
+                            projectPath: scan.folderPath,
+                            detectedServices: scan.detectedServices,
+                            codeAnalysisSummary: scan.codeAnalysisSummary || p.codeAnalysisSummary,
+                            iconDataUrl: scan.iconDataUrl || p.iconDataUrl,
+                            impressum: p.impressum || scan.detectedImpressum || '',
+                            datenschutzerklaerung: p.datenschutzerklaerung || scan.detectedDatenschutz || ''
+                        };
+                    }
+                    return p;
+                });
+                setProjects(updatedList);
+                saveProjectsToStorage(updatedList);
+            }
+        } catch (err) {
+            console.error('Fehler beim Neuscannen des Projekt-Ordners:', err);
+        } finally {
+            setRescanningProjectId(null);
+        }
+    };
+
     const handleToggleCommercial = (project: Project, e: React.MouseEvent) => {
         e.stopPropagation();
         const updated = projects.map(p =>
@@ -654,7 +743,9 @@ export default function App() {
                         ...project,
                         detectedServices: scanResult.detectedServices,
                         codeAnalysisSummary: scanResult.codeAnalysisSummary || project.codeAnalysisSummary,
-                        iconDataUrl: scanResult.iconDataUrl || project.iconDataUrl
+                        iconDataUrl: scanResult.iconDataUrl || project.iconDataUrl,
+                        impressum: currentProject.impressum || scanResult.detectedImpressum || '',
+                        datenschutzerklaerung: currentProject.datenschutzerklaerung || scanResult.detectedDatenschutz || ''
                     };
                     const updatedList = projects.map(p => p.id === currentProject.id ? currentProject : p);
                     saveProjectsToStorage(updatedList);
@@ -1147,14 +1238,29 @@ export default function App() {
                                                             {project.name}
                                                         </h3>
                                                     </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => handleDeleteProject(project, e)}
-                                                        className="hub-round shrink-0 hover:!bg-red-50 hover:!text-red-600 -mr-1"
-                                                        title="Projekt löschen"
-                                                    >
-                                                        <TrashIcon className="w-4 h-4" />
-                                                    </button>
+                                                    <div className="flex items-center gap-1 shrink-0 -mr-1">
+                                                        {project.projectPath && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleRescanCardProject(project);
+                                                                }}
+                                                                className="hub-round shrink-0 hover:!bg-primary-50 hover:!text-primary-600"
+                                                                title="Projekt-Ordner erneut scannen"
+                                                            >
+                                                                <ArrowPathIcon className={`w-4 h-4 ${rescanningProjectId === project.id ? 'animate-spin text-primary-600' : ''}`} />
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => handleDeleteProject(project, e)}
+                                                            className="hub-round shrink-0 hover:!bg-red-50 hover:!text-red-600"
+                                                            title="Projekt löschen"
+                                                        >
+                                                            <TrashIcon className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
                                                 </div>
 
                                                 {/* Badges: Volle Kartenbreite (kein Abschneiden der Kapseln) */}

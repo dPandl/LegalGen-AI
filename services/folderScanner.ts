@@ -367,8 +367,163 @@ function cleanLegalDocumentText(raw: string, isHtml = false): string {
     return text.trim();
 }
 
+/**
+ * Wandelt strukturierte JavaScript-Objekte (wie IMPRESSUM_DATA oder PRIVACY_DATA) sauber in Markdown um.
+ */
+export function formatStructuredLegalObjectToMarkdown(data: any): string {
+    if (!data || typeof data !== 'object') return '';
+    const parts: string[] = [];
+
+    if (data.title && typeof data.title === 'string') {
+        parts.push(`# ${data.title.trim()}\n`);
+    }
+    if (data.subtitle && typeof data.subtitle === 'string') {
+        parts.push(`*${data.subtitle.trim()}*\n`);
+    }
+    if (data.intro && typeof data.intro === 'string') {
+        parts.push(`${data.intro.trim()}\n`);
+    }
+
+    if (Array.isArray(data.sections)) {
+        for (const sec of data.sections) {
+            if (!sec || typeof sec !== 'object') continue;
+            if (sec.title) {
+                parts.push(`## ${sec.title}\n`);
+            }
+            if (Array.isArray(sec.paragraphs)) {
+                for (const p of sec.paragraphs) {
+                    if (p) parts.push(`${p}\n`);
+                }
+            }
+            if (sec.text) {
+                parts.push(`${sec.text}\n`);
+            }
+            if (Array.isArray(sec.lines)) {
+                parts.push(sec.lines.filter(Boolean).join('\n') + '\n');
+            }
+            if (sec.email) {
+                parts.push(`E-Mail: ${sec.email}\n`);
+            }
+            if (sec.contact && typeof sec.contact === 'object') {
+                const c = sec.contact;
+                const contactLines: string[] = [];
+                if (c.name) contactLines.push(c.name);
+                if (c.street) contactLines.push(c.street);
+                if (c.city) contactLines.push(c.city);
+                if (c.email) contactLines.push(`E-Mail: ${c.email}`);
+                if (c.phone) contactLines.push(`Telefon: ${c.phone}`);
+                if (contactLines.length > 0) {
+                    parts.push(contactLines.join('\n') + '\n');
+                }
+            }
+            if (Array.isArray(sec.subsections)) {
+                for (const sub of sec.subsections) {
+                    if (!sub || typeof sub !== 'object') continue;
+                    if (sub.title) {
+                        parts.push(`### ${sub.title}\n`);
+                    }
+                    if (sub.text) {
+                        parts.push(`${sub.text}\n`);
+                    }
+                    if (sub.extraText) {
+                        parts.push(`${sub.extraText}\n`);
+                    }
+                    if (Array.isArray(sub.listItems)) {
+                        for (const item of sub.listItems) {
+                            parts.push(`- ${item}`);
+                        }
+                        parts.push('');
+                    }
+                    if (sub.footerText) {
+                        parts.push(`${sub.footerText}\n`);
+                    }
+                }
+            }
+            if (sec.extraText) {
+                parts.push(`${sec.extraText}\n`);
+            }
+            if (Array.isArray(sec.listItems)) {
+                for (const item of sec.listItems) {
+                    parts.push(`- ${item}`);
+                }
+                parts.push('');
+            }
+            if (sec.footerText) {
+                parts.push(`${sec.footerText}\n`);
+            }
+            if (sec.footer) {
+                parts.push(`*${sec.footer}*\n`);
+            }
+        }
+    }
+
+    if (data.footer && typeof data.footer === 'string') {
+        parts.push(`*${data.footer.trim()}*\n`);
+    }
+
+    return parts.join('\n').trim();
+}
+
+/**
+ * Extrahiert ein JavaScript-Objektliteral aus dem Code anhand von balancierten geschweiften Klammern.
+ */
+function extractObjectByKeyword(code: string, pattern: string): any {
+    const regex = new RegExp('(?:export\\s+)?(?:const|let|var)\\s+([A-Za-z0-9_]*' + pattern + '[A-Za-z0-9_]*)\\s*(?::\\s*[^=]+)?\\s*=\\s*\\{', 'i');
+    const match = regex.exec(code);
+    if (!match) return null;
+    const startIndex = match.index + match[0].length - 1; // Position des öffnenden '{'
+    let braceCount = 0;
+    let endIndex = -1;
+    let inString = false;
+    let stringChar = '';
+    let isEscaped = false;
+
+    for (let i = startIndex; i < code.length; i++) {
+        const char = code[i];
+        if (inString) {
+            if (isEscaped) {
+                isEscaped = false;
+            } else if (char === '\\') {
+                isEscaped = true;
+            } else if (char === stringChar) {
+                inString = false;
+            }
+        } else {
+            if (char === '"' || char === "'" || char === '`') {
+                inString = true;
+                stringChar = char;
+            } else if (char === '{') {
+                braceCount++;
+            } else if (char === '}') {
+                braceCount--;
+                if (braceCount === 0) {
+                    endIndex = i + 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (endIndex === -1) return null;
+    const objectStr = code.slice(startIndex, endIndex);
+    try {
+        return new Function('return ' + objectStr)();
+    } catch {
+        return null;
+    }
+}
+
 function extractLegalTextFromCode(code: string, type: 'impressum' | 'datenschutz'): string | null {
     if (type === 'impressum') {
+        // 0. Suche nach exportierten Objekten (z.B. IMPRESSUM_DATA = { ... })
+        const obj = extractObjectByKeyword(code, '(?:IMPRESSUM|IMPRINT)');
+        if (obj && typeof obj === 'object') {
+            const md = formatStructuredLegalObjectToMarkdown(obj);
+            if (md && md.length > 30) {
+                return md;
+            }
+        }
+
         // 1. Suche nach Backtick-Konstante mit IMPRESSUM oder IMPRINT im Namen
         const backtickMatch = code.match(
             /(?:export\s+)?(?:const|let|var)\s+([A-Za-z0-9_]*(?:IMPRESSUM|IMPRINT)[A-Za-z0-9_]*)\s*(?::\s*string)?\s*=\s*`([\s\S]+?)`;/i
@@ -411,6 +566,15 @@ function extractLegalTextFromCode(code: string, type: 'impressum' | 'datenschutz
         }
     } else {
         // DATENSCHUTZ
+        // 0. Suche nach exportierten Objekten (z.B. PRIVACY_DATA = { ... } oder DATENSCHUTZ_DATA)
+        const obj = extractObjectByKeyword(code, '(?:DATENSCHUTZ|PRIVACY)');
+        if (obj && typeof obj === 'object') {
+            const md = formatStructuredLegalObjectToMarkdown(obj);
+            if (md && md.length > 50) {
+                return md;
+            }
+        }
+
         // 1. Suche nach Backtick-Konstante mit DATENSCHUTZ oder PRIVACY im Namen
         const backtickMatch = code.match(
             /(?:export\s+)?(?:const|let|var)\s+([A-Za-z0-9_]*(?:DATENSCHUTZ|PRIVACY)[A-Za-z0-9_]*)\s*(?::\s*string)?\s*=\s*`([\s\S]+?)`;/i
@@ -472,12 +636,22 @@ export async function detectExistingLegalDocs(
         datenschutzSource?: string;
     } = {};
 
-    // 1. Suche nach bekannten Dateipfaden (Markdown, Text oder HTML)
+    // 1. Suche nach bekannten Dateipfaden (Markdown, Text, HTML oder JS/TS)
     const IMPRESSUM_CANDIDATE_PATHS = [
         'impressum.md',
         'imprint.md',
         'impressum.txt',
         'imprint.txt',
+        'src/impressum.js',
+        'src/impressum.ts',
+        'src/impressum.jsx',
+        'src/impressum.tsx',
+        'src/imprint.js',
+        'src/imprint.ts',
+        'src/legal/impressum.js',
+        'src/legal/impressum.ts',
+        'impressum.js',
+        'impressum.ts',
         'docs/impressum.md',
         'docs/imprint.md',
         'legal/impressum.md',
@@ -497,6 +671,18 @@ export async function detectExistingLegalDocs(
         'privacy-policy.md',
         'privacypolicy.md',
         'privacy.txt',
+        'src/privacy.js',
+        'src/privacy.ts',
+        'src/privacy.jsx',
+        'src/privacy.tsx',
+        'src/datenschutz.js',
+        'src/datenschutz.ts',
+        'src/datenschutz.jsx',
+        'src/datenschutz.tsx',
+        'src/legal/privacy.js',
+        'src/legal/datenschutz.js',
+        'privacy.js',
+        'datenschutz.js',
         'docs/datenschutz.md',
         'docs/datenschutzerklaerung.md',
         'docs/privacy.md',
@@ -519,9 +705,17 @@ export async function detectExistingLegalDocs(
             try {
                 const text = await vf.getText();
                 if (text && text.trim().length > 30) {
-                    const isHtml = path.endsWith('.html') || path.endsWith('.htm');
-                    result.impressum = cleanLegalDocumentText(text, isHtml);
-                    result.impressumSource = vf.relativePath;
+                    if (/\.(js|jsx|ts|tsx|vue)$/i.test(path)) {
+                        const extracted = extractLegalTextFromCode(text, 'impressum');
+                        if (extracted) {
+                            result.impressum = extracted;
+                            result.impressumSource = vf.relativePath;
+                        }
+                    } else {
+                        const isHtml = path.endsWith('.html') || path.endsWith('.htm');
+                        result.impressum = cleanLegalDocumentText(text, isHtml);
+                        result.impressumSource = vf.relativePath;
+                    }
                 }
             } catch (e) {}
         }
@@ -534,9 +728,17 @@ export async function detectExistingLegalDocs(
             try {
                 const text = await vf.getText();
                 if (text && text.trim().length > 50) {
-                    const isHtml = path.endsWith('.html') || path.endsWith('.htm');
-                    result.datenschutz = cleanLegalDocumentText(text, isHtml);
-                    result.datenschutzSource = vf.relativePath;
+                    if (/\.(js|jsx|ts|tsx|vue)$/i.test(path)) {
+                        const extracted = extractLegalTextFromCode(text, 'datenschutz');
+                        if (extracted) {
+                            result.datenschutz = extracted;
+                            result.datenschutzSource = vf.relativePath;
+                        }
+                    } else {
+                        const isHtml = path.endsWith('.html') || path.endsWith('.htm');
+                        result.datenschutz = cleanLegalDocumentText(text, isHtml);
+                        result.datenschutzSource = vf.relativePath;
+                    }
                 }
             } catch (e) {}
         }
@@ -1458,15 +1660,22 @@ export async function selectAndScanProjectFolder(): Promise<ScanResult | null> {
     return await analyzeVirtualFiles(rootFolderName || 'Projekt-Ordner', virtualFiles);
 }
 
-export async function tryAutoRescanProjectFolder(folderPath: string): Promise<ScanResult | null> {
+export async function tryAutoRescanProjectFolder(folderPath: string, onlyIfGranted = false): Promise<ScanResult | null> {
     try {
         const handle = await resolveDirectoryHandleForProject(folderPath);
         if (!handle) return null;
 
         if ('queryPermission' in handle) {
             let perm = await handle.queryPermission({ mode: 'read' });
-            if (perm !== 'granted' && 'requestPermission' in handle) {
-                perm = await handle.requestPermission({ mode: 'read' });
+            if (perm !== 'granted') {
+                if (onlyIfGranted) return null;
+                if ('requestPermission' in handle) {
+                    try {
+                        perm = await handle.requestPermission({ mode: 'read' });
+                    } catch {
+                        return null;
+                    }
+                }
             }
             if (perm !== 'granted') {
                 return null;

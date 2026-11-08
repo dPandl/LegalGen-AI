@@ -1,7 +1,7 @@
 // @legalgen-ignore-scan
 import React, { useState, useEffect } from 'react';
 import type { Project } from '../types';
-import { selectAndScanProjectFolder, rescanProjectFolder, evaluateCookieBannerStatus } from '../services/folderScanner';
+import { selectAndScanProjectFolder, rescanProjectFolder, tryAutoRescanProjectFolder, evaluateCookieBannerStatus } from '../services/folderScanner';
 import {
     ArrowLeftIcon,
     GlobeIcon,
@@ -38,6 +38,24 @@ export const ProjectDetail: React.FC<ProjectDetailsProps> = ({ project, onBack, 
         setIsEditingText(false);
         setDraftText(activeTab === 'impressum' ? project.impressum : project.datenschutzerklaerung);
     }, [activeTab, project.impressum, project.datenschutzerklaerung]);
+
+    useEffect(() => {
+        if (project.projectPath && (!project.impressum || !project.datenschutzerklaerung)) {
+            tryAutoRescanProjectFolder(project.projectPath, true).then(res => {
+                if (res && (res.detectedImpressum || res.detectedDatenschutz)) {
+                    onUpdateProject({
+                        ...project,
+                        projectPath: res.folderPath,
+                        detectedServices: res.detectedServices,
+                        codeAnalysisSummary: res.codeAnalysisSummary || project.codeAnalysisSummary,
+                        iconDataUrl: res.iconDataUrl || project.iconDataUrl,
+                        impressum: project.impressum || res.detectedImpressum || '',
+                        datenschutzerklaerung: project.datenschutzerklaerung || res.detectedDatenschutz || ''
+                    });
+                }
+            }).catch(() => {});
+        }
+    }, [project.id]);
 
     const handleStartManualEdit = () => {
         setDraftText(activeTab === 'impressum' ? project.impressum : project.datenschutzerklaerung);
