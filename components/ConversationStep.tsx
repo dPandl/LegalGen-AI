@@ -131,6 +131,10 @@ export const ConversationStep: React.FC<ChatViewProps> = ({
                             ? parseMessageContent(msg.content)
                             : { cleanText: msg.content, options: [] };
 
+                        if (msg.role === 'assistant' && !cleanText && options.length === 0) {
+                            return null;
+                        }
+
                         return (
                             <div key={index} className="space-y-2.5">
                                 <div className={`flex items-start gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>

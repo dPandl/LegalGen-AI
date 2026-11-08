@@ -807,6 +807,10 @@ export default function App() {
         try {
             const responseText = await chatService.current.sendMessage(textToSend);
 
+            if (!responseText || !responseText.trim()) {
+                throw new Error("Die KI hat keine lesbare Textantwort zurückgegeben. Bitte versuchen Sie es erneut.");
+            }
+
             if (chatService.current.isFinalDocument(responseText)) {
                 const docs = chatService.current.extractDocuments(responseText);
                 setGeneratedTexts(docs);

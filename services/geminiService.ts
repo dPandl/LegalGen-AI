@@ -43,6 +43,70 @@ function isValidLegalDocumentText(text?: string): boolean {
     return true;
 }
 
+function renderDetectedServicesLegalGuidance(detectedServices: string[]): string {
+    if (!detectedServices || detectedServices.length === 0) {
+        return `Auf unserer Web-App werden keine externen Drittanbieter-Tools, Schriftenserver (wie Google Fonts) oder APIs eingebunden. Alle Schriftarten und Programm-Dateien werden lokal ausgeliefert.`;
+    }
+
+    const lines: string[] = [];
+    lines.push(`Wir binden in unserer Web-App folgende externe Dienste und Bibliotheken ein, um die technische Funktionalität, Sicherheit und eine einheitliche optische Gestaltung zu gewährleisten:`);
+
+    for (const service of detectedServices) {
+        const lower = service.toLowerCase();
+        if (lower.includes('google fonts')) {
+            lines.push(`
+* **Google Web Fonts (via Google CDN):**
+  - **Dienstanbieter:** Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland (Muttergesellschaft: Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA).
+  - **Zweck und Funktionsweise:** Zur optisch ansprechenden, einheitlichen und performanten Darstellung von Schriftarten lädt der Webbrowser beim Aufruf dieser Web-App die benötigten Web-Fonts direkt von den Servern von Google (fonts.googleapis.com / fonts.gstatic.com). Hierbei erlangt Google Kenntnis über die IP-Adresse des anfragenden Geräts sowie technische Browserdaten.
+  - **Rechtsgrundlage:** Berechtigtes Interesse gem. Art. 6 Abs. 1 lit. f DSGVO (ansprechende und einheitliche typografische Darstellung der Lern- bzw. Anwendungsinhalte).
+  - **Datenübermittlung in die USA:** Google LLC ist unter dem **EU-U.S. Data Privacy Framework (DPF)** zertifiziert. Der Datentransfer stützt sich auf den Angemessenheitsbeschluss der Europäischen Kommission gem. Art. 45 DSGVO.
+  - **Datenschutzerklärung von Google:** https://policies.google.com/privacy`);
+        } else if (lower.includes('github pages')) {
+            lines.push(`
+* **GitHub Pages (Hosting & Server-Logfiles):**
+  - **Dienstanbieter:** GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA (Mutterkonzern: Microsoft Corporation).
+  - **Zweck:** Technische Bereitstellung der Webanwendung und Absicherung der Serverinfrastruktur.
+  - **Erhobene Daten:** Server-Logfiles (IP-Adresse, Datum, Uhrzeit, abgerufene Seite, Browsertyp/-version).
+  - **Rechtsgrundlage:** Berechtigtes Interesse gem. Art. 6 Abs. 1 lit. f DSGVO (technisch fehlerfreie und stabile Bereitstellung).
+  - **Drittstaatentransfer:** GitHub, Inc. bzw. Microsoft Corporation ist nach dem EU-U.S. Data Privacy Framework (DPF) zertifiziert.`);
+        } else if (lower.includes('tailwind')) {
+            lines.push(`
+* **Tailwind CSS CDN:**
+  - **Dienstanbieter:** Tailwind Labs Inc. / Cloudflare Inc.
+  - **Zweck:** Auslieferung des CSS-Frameworks über Content Delivery Network.
+  - **Rechtsgrundlage:** Art. 6 Abs. 1 lit. f DSGVO.`);
+        } else if (lower.includes('stripe')) {
+            lines.push(`
+* **Stripe (Zahlungsabwicklung):**
+  - **Dienstanbieter:** Stripe Payments Europe, Ltd., 1 Grand Canal Street Lower, Grand Canal Dock, Dublin, Irland.
+  - **Zweck & Rechtsgrundlage:** Abwicklung von Zahlungen gem. Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung).`);
+        } else if (lower.includes('paypal')) {
+            lines.push(`
+* **PayPal (Zahlungsabwicklung):**
+  - **Dienstanbieter:** PayPal (Europe) S.à r.l. et Cie, S.C.A., 22-24 Boulevard Royal, L-2449 Luxemburg.
+  - **Zweck & Rechtsgrundlage:** Zahlungsabwicklung gem. Art. 6 Abs. 1 lit. b DSGVO.`);
+        } else if (lower.includes('sentry')) {
+            lines.push(`
+* **Sentry (Fehleranalyse):**
+  - **Dienstanbieter:** Functional Software, Inc. dba Sentry, 45 Fremont Street, 8th Floor, San Francisco, CA 94105, USA.
+  - **Zweck:** Technische Fehlerprotokollierung zur Stabilitätsverbesserung.
+  - **Rechtsgrundlage:** Art. 6 Abs. 1 lit. f DSGVO, DPF-zertifiziert.`);
+        } else if (lower.includes('youtube')) {
+            lines.push(`
+* **YouTube Video Embeds:**
+  - **Dienstanbieter:** Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland.
+  - **Zweck:** Einbettung und Abspielen von Videoinhalten im erweiterten Datenschutzmodus.
+  - **Rechtsgrundlage:** Art. 6 Abs. 1 lit. f bzw. lit. a DSGVO, DPF-zertifiziert.`);
+        } else {
+            lines.push(`
+* **${service}:**
+  - Darzustellen mit Dienstanbieter, Zweck der Einbindung, verarbeiteten Daten (z. B. IP-Adresse) und Rechtsgrundlage (Art. 6 Abs. 1 lit. f DSGVO) sowie Drittstaaten-Transfer (EU-U.S. Data Privacy Framework, falls US-Dienst).`);
+        }
+    }
+
+    return lines.join('\n');
+}
+
 export class LegalGenChatService {
     private chat: Chat;
     private ai: GoogleGenAI;
@@ -50,6 +114,7 @@ export class LegalGenChatService {
     private currentModel: string;
     private projectName: string;
     private userProfile: UserProfile;
+    private detectedServices: string[];
     private isCommercial?: boolean;
     private onModelFallback?: (newModel: string, reason: string) => void;
     public documentMode: 'both' | 'impressum' | 'datenschutz';
@@ -78,6 +143,7 @@ export class LegalGenChatService {
         this.documentMode = documentMode;
         this.projectName = projectName;
         this.userProfile = profile;
+        this.detectedServices = detectedServices || [];
         this.isCommercial = isCommercial;
         this.onModelFallback = onModelFallback;
         this.ai = new GoogleGenAI({ apiKey: apiKey });
@@ -167,13 +233,13 @@ export class LegalGenChatService {
             * **Rechtsgrundlage:** Berechtigtes Interesse gem. Art. 6 Abs. 1 lit. f DSGVO.
             * **Speicherdauer:** Die Daten verbleiben auf den Webservern des Hosters und werden gelöscht bzw. anonymisiert, sobald sie für den Zweck nicht mehr erforderlich sind.
 
-            **6. Einsatz von Cookies und vergleichbaren Technologien**
+            **6. Einsatz von Cookies und vergleichbaren Technologien (LocalStorage)**
             * **Art der Cookies:** Wir setzen keine Marketing-, Tracking- oder Profiling-Cookies ein.
-            * **Einwilligungsfreiheit (§ 25 Abs. 2 TDDDG):** Soweit rein technisch notwendige Werte lokal im Speicher abgelegt werden (z. B. Einstellungen im localStorage), ist gemäß § 25 Abs. 2 Nr. 2 TDDDG keine gesonderte Einwilligung erforderlich. Ein Cookie-Banner ist daher nicht implementiert.
+            * **Einwilligungsfreiheit (§ 25 Abs. 2 TDDDG):** Soweit rein technisch notwendige Werte lokal im Speicher abgelegt werden (z. B. Einstellungen oder Lern-/Spielfortschritte im localStorage), ist dies gemäß § 25 Abs. 2 Nr. 2 TDDDG einwilligungsfrei zulässig, da es technisch unbedingt erforderlich ist, um den vom Nutzer ausdrücklich gewünschten Dienst bereitzustellen. Ein Cookie-Banner ist daher nicht implementiert.
             * **Rechtsgrundlage:** Berechtigtes Interesse gem. Art. 6 Abs. 1 lit. f DSGVO i.V.m. § 25 Abs. 2 TDDDG.
 
-            **7. Externe Dienste und Inhalte**
-            ${detectedServices && detectedServices.length > 0 ? `Im Quellcode wurden folgende genutzte Dienste erkannt:\n${detectedServices.map(s => `- ${s}`).join('\n')}\n(Stellen Sie diese Dienste einzeln mit Anbieter, Zweck und Rechtsgrundlage dar.)` : 'Im Quellcode der Anwendung sind keine externen Drittanbieter-Tools, Schriftenserver (wie Google Fonts) oder APIs eingebunden. Alle Schriften und Assets werden lokal ausgeliefert.'}
+            **7. Externe Dienste, Bibliotheken und Inhalte**
+            ${renderDetectedServicesLegalGuidance(detectedServices)}
 
             **8. Ihre Rechte als betroffene Person**
             Sie haben als betroffene Person nach der DSGVO folgende Rechte:
@@ -217,16 +283,19 @@ export class LegalGenChatService {
             ${isCommercial !== false ? `## Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV:\n${profile.name || ''}\n${profile.street || ''}\n${profile.zipCode || ''} ${profile.city || ''}\n` : ''}
 
             STRIKTE REGEL FÜR DATENSPARSAME TOOLS & STATISCHE SEITEN (KEIN BACKEND / KEIN TRACKING):
-            Wenn laut Quellcode-Analyse KEINE Tracking-Tools, keine externen Datenbanken, keine Backend-Server und keine Kontaktformulare vorhanden sind (z. B. Entwickler-Tools, statische HTML-Seiten, GitHub Pages, Desktop-Tools):
+            Wenn die Web-App rein clientseitig ohne eigenes Backend, ohne Nutzerkonten und ohne Marketing-Tracking betrieben wird:
             - VERBOTEN: Schreiben Sie NIEMALS falsche Standard-Floskeln wie:
               ❌ „Wenn Sie diese Website benutzen, werden verschiedene personenbezogene Daten erhoben“
               ❌ „Speicherdauer: Ihre personenbezogenen Daten verbleiben bei uns, bis der Zweck entfällt“
               ❌ „Viele Datenverarbeitungsvorgänge sind nur mit Ihrer ausdrücklichen Einwilligung möglich“
               Das ist bei datensparsamen Tools sachlich falsch, irreführend und unprofessionell!
             - SCHREIBEN SIE DIE ECHTE REALITÄT:
-              1. Der Betreiber selbst erhebt, speichert und verarbeitet KEINERLEI personenbezogene Daten von Nutzern (weder Namen, noch Nutzungsdaten oder Telemetrie). Es gibt keine Benutzerkonten, keine Kontaktformulare und keine Cookies.
-              2. Technische Bereitstellung / Hosting: Beim rein technischen Laden der Webseite über das Internet verarbeitet ausschließlich der Webserver des Hosters (z. B. GitHub Pages / GitHub Inc.) automatisch Server-Logfiles (IP-Adresse, Datum, Uhrzeit, Browser), um die Seite technisch fehlerfrei auszuliefern (Art. 6 Abs. 1 lit. f DSGVO). Der Betreiber dieser Seite speichert diese Daten nicht selbst.
-              3. Lokale Verarbeitung: Alle Berechnungen oder Datei-Operationen finden ausschließlich lokal im Webbrowser auf dem Gerät des Nutzers statt.
+              1. Der Betreiber selbst erhebt, speichert und verarbeitet KEINERLEI personenbezogene Daten von Nutzern (weder Namen, noch Nutzungsdaten oder Telemetrie). Es gibt keine Benutzerkonten, keine Registrierung und keine Cookies.
+              2. Technische Bereitstellung / Hosting: Beim technischen Abruf der Seite verarbeitet ausschließlich der Webserver des Hosters (z. B. GitHub Pages) automatisch Server-Logfiles (IP-Adresse, Datum, Uhrzeit, Browser), um die Seite technisch fehlerfrei auszuliefern (Art. 6 Abs. 1 lit. f DSGVO). Der Betreiber dieser Seite speichert diese Daten nicht selbst.
+              3. ZWINGENDE PFLICHT FÜR IM QUELLCODE ERFASSTE DIENSTE (WICHTIG):
+                 WURDEN IM QUELLCODE EXTERNE RESSOURCEN ERKANNT (wie z. B. „Google Fonts (via CDN)“, APIs oder externe CDNs), DÜRFEN DIESE NIEMALS VERSCHWIEGEN ODER WEGGELASSEN WERDEN!
+                 Sie MÜSSEN zwingend unter Punkt 7 („Externe Dienste, Bibliotheken und Inhalte“) mit Anbieter, Zweck, Datenübertragung (IP-Adresse) und Rechtsgrundlage (Art. 6 Abs. 1 lit. f DSGVO) sowie DPF-Zertifizierung vollständig aufgeführt werden!
+              4. Lokale Speicherung: Soweit Spielfortschritte oder Einstellungen im localStorage abgelegt werden, erfolgt dies rein lokal auf dem Endgerät auf Grundlage von § 25 Abs. 2 Nr. 2 TDDDG (technisch erforderlich für die vom Nutzer gewünschte Funktion) und erfordert kein Cookie-Banner.
 
             VERBOT VON PLATZHALTER- & DOPPEL-ABFRAGEN (STAMMDATEN & NUTZUNGSTYP FEST VORGEGEBEN):
             - Der Nutzungstyp des Projekts steht bereits unumstößlich fest: ${isCommercial !== false ? 'Kommerziell / Gewerblich' : 'Rein privat / hobbymäßig (komplett gratis)'}!
@@ -310,22 +379,16 @@ export class LegalGenChatService {
 
         this.systemInstruction = systemInstruction;
 
-        const thinkingConfig = this.getThinkingConfig();
-        const chatConfig: any = {
-            systemInstruction: this.systemInstruction,
-        };
-        if (thinkingConfig) {
-            chatConfig.thinkingConfig = thinkingConfig;
-        }
-
         this.chat = this.ai.chats.create({
             model: this.currentModel,
-            config: chatConfig,
+            config: this.getChatConfig(),
         });
     }
 
     public isFinalDocument(text: string): boolean {
-        if (text.includes('<IMPRESSUM_FINAL>') || text.includes('<DATENSCHUTZ_FINAL>')) {
+        if (!text || text.trim().length === 0) return false;
+
+        if (/<IMPRESSUM_FINAL>/i.test(text) || /<DATENSCHUTZ_FINAL>/i.test(text)) {
             return true;
         }
 
@@ -349,8 +412,8 @@ export class LegalGenChatService {
     }
 
     public extractDocuments(text: string): { impressum: string; datenschutzerklaerung: string } {
-        const impressumMatch = text.match(/<IMPRESSUM_FINAL>([\s\S]*?)<\/IMPRESSUM_FINAL>/);
-        const datenschutzMatch = text.match(/<DATENSCHUTZ_FINAL>([\s\S]*?)<\/DATENSCHUTZ_FINAL>/);
+        const impressumMatch = text.match(/<IMPRESSUM_FINAL>([\s\S]*?)<\/IMPRESSUM_FINAL>/i);
+        const datenschutzMatch = text.match(/<DATENSCHUTZ_FINAL>([\s\S]*?)<\/DATENSCHUTZ_FINAL>/i);
 
         let rawImpressum = impressumMatch ? impressumMatch[1].trim() : '';
         let rawDatenschutz = datenschutzMatch ? datenschutzMatch[1].trim() : '';
@@ -411,10 +474,7 @@ export class LegalGenChatService {
                 this.onModelFallback?.('gemini-3.6-flash', `Tageslimit für ${oldModel} erreicht. Automatisch auf gemini-3.6-flash umgestellt.`);
                 this.chat = this.ai.chats.create({
                     model: 'gemini-3.6-flash',
-                    config: {
-                        systemInstruction: this.systemInstruction,
-                        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
-                    },
+                    config: this.getChatConfig(),
                 });
                 return await action();
             }
@@ -442,53 +502,124 @@ export class LegalGenChatService {
         if (this.currentModel === 'gemini-2.5-flash') {
             return { thinkingBudget: 0 };
         }
-        return { thinkingLevel: ThinkingLevel.LOW };
+        return { thinkingLevel: ThinkingLevel.MINIMAL, includeThoughts: false };
+    }
+
+    private getChatConfig(): any {
+        const config: any = {
+            systemInstruction: this.systemInstruction,
+            maxOutputTokens: 8192,
+        };
+        const thinkingConfig = this.getThinkingConfig();
+        if (thinkingConfig) {
+            config.thinkingConfig = thinkingConfig;
+        }
+        return config;
+    }
+
+    private extractResponseText(response: any): string {
+        let text = response?.text || '';
+        if (!text && response?.candidates?.[0]?.content?.parts) {
+            const parts = response.candidates[0].content.parts;
+            // 1. Zuerst reguläre Text-Parts (ohne Gedankenprozess) filtern
+            const cleanParts = parts
+                .filter((p: any) => !p.thought && typeof p.text === 'string')
+                .map((p: any) => p.text)
+                .join('');
+            if (cleanParts.trim()) {
+                text = cleanParts;
+            } else {
+                // 2. Fallback: Alle Textteile sammeln
+                const allParts = parts
+                    .filter((p: any) => typeof p.text === 'string')
+                    .map((p: any) => p.text)
+                    .join('');
+                if (allParts.trim()) {
+                    text = allParts;
+                }
+            }
+        }
+
+        const trimmed = (text || '').trim();
+        if (!trimmed) {
+            const candidate = response?.candidates?.[0];
+            const finishReason = candidate?.finishReason || 'UNBEKANNT';
+            console.error('Gemini lieferte leere Textantwort. Response-Objekt:', response);
+            if (finishReason === 'SAFETY') {
+                throw new Error('Die Generierung wurde durch Googles Sicherheitsfilter blockiert. Bitte prüfen Sie die Eingaben.');
+            } else if (finishReason === 'MAX_TOKENS') {
+                throw new Error('Das maximale Ausgabe-Limit (Token-Limit) wurde erreicht. Bitte versuchen Sie es erneut.');
+            }
+            throw new Error(`Die KI hat keine Textantwort zurückgegeben (Finish-Reason: ${finishReason}). Bitte versuchen Sie es erneut.`);
+        }
+
+        return trimmed;
     }
 
     async startConversation(): Promise<string> {
         return await this.executeWithFallback(async () => {
             const hasProfileData = Boolean(this.userProfile?.name && this.userProfile?.email);
+            const detectedServicesInfo = this.detectedServices.length > 0
+                ? `- Im Quellcode erkannte genutzte Dienste: ${this.detectedServices.join(', ')}. Diese stehen bereits fest und fließen zwingend in die Rechtstexte ein!`
+                : '- Keine externen Drittanbieter-Tools im Quellcode erkannt.';
+
             const prompt = `Starten Sie jetzt die Rechtstexte-Erstellung (Impressum und/oder Datenschutzerklärung) für das Projekt „${this.projectName}“.
-1. Begrüßen Sie den Benutzer in 1-2 kurzen Sätzen und fassen Sie stichpunktartig zusammen, welche technischen Fakten (Projekttyp, erkannte Dienste, Profilangaben) Sie für die Rechtstexte bereits vorliegen haben.
+1. Begrüßen Sie den Benutzer in 1-2 kurzen Sätzen und fassen Sie stichpunktartig zusammen, welche technischen Fakten (Projekttyp, erkannte Dienste: ${this.detectedServices.join(', ') || 'Keine'}, Profilangaben) Sie für die Rechtstexte bereits vorliegen haben.
 ${hasProfileData ? `- Nennen Sie die Stammdaten des Benutzers (${this.userProfile.name}, ${this.userProfile.city || ''}, ${this.userProfile.email}) als bereits bekannt!` : ''}
+${detectedServicesInfo}
 2. Stellen Sie genau EINE einzige, konkrete juristische Frage zu noch fehlenden Angaben (z. B. Hosting-Provider wie GitHub Pages oder Vercel, falls noch unbekannt). Falls bereits alle Angaben für die Rechtstexte vorliegen, fragen Sie direkt, ob Sie das Dokument jetzt generieren sollen.
 3. Fügen Sie am Ende IMMER 3 bis 4 klickbare Optionen im Format <OPTIONS>Option 1|Option 2|Option 3</OPTIONS> an (zwingend mit Pipe-Symbol | getrennt!).
 4. STRENGES VERBOT: Fragen Sie NIEMALS nach Name, Adresse, E-Mail, privat vs. gewerblich oder Platzhaltern!`;
 
             const response = await this.chat.sendMessage({
                 message: prompt,
-                config: {
-                    thinkingConfig: this.getThinkingConfig()
-                }
+                config: this.getChatConfig()
             });
-            return response.text || '';
+            return this.extractResponseText(response);
         });
     }
 
     async sendMessage(message: string): Promise<string> {
         return await this.executeWithFallback(async () => {
+            const detectedServicesSummary = this.detectedServices.length > 0
+                ? `Im Quellcode erkannte Dienste: [${this.detectedServices.join(', ')}]. DIESE DIENSTE MÜSSEN ZWINGEND VOLLSTÄNDIG in der Datenschutzerklärung unter Punkt 7 mit Anbieter, Zweck, Rechtsgrundlage (Art. 6 Abs. 1 lit. f DSGVO) und DPF-Status aufgeführt werden! Verschweigen Sie NIEMALS Google Fonts oder andere im Quellcode erkannte Dienste!`
+                : `Keine externen Drittanbieter-Tools im Quellcode erkannt. Schriften und Assets werden lokal ausgeliefert.`;
+
+            const isConfirmation = /ja|erstellen|generieren|jetzt|fertig/i.test(message);
+            let finalDirective = '';
+            if (isConfirmation) {
+                if (this.documentMode === 'impressum') {
+                    finalDirective = `\n\n[WICHTIGE ANWEISUNG: Der Benutzer hat die finale Erstellung bestätigt. Geben Sie JETZT DIREKT und AUSSCHLIESSLICH das vollständige Impressum im XML-Tag <IMPRESSUM_FINAL>...</IMPRESSUM_FINAL> aus und setzen Sie <DATENSCHUTZ_FINAL>KEEP_EXISTING</DATENSCHUTZ_FINAL>. Keine weiteren Fragen oder Optionen!]`;
+                } else if (this.documentMode === 'datenschutz') {
+                    finalDirective = `\n\n[WICHTIGE ANWEISUNG: Der Benutzer hat die finale Erstellung bestätigt. Geben Sie JETZT DIREKT und AUSSCHLIESSLICH die vollständige Datenschutzerklärung im XML-Tag <DATENSCHUTZ_FINAL>...</DATENSCHUTZ_FINAL> aus und setzen Sie <IMPRESSUM_FINAL>KEEP_EXISTING</IMPRESSUM_FINAL>. Keine weiteren Fragen oder Optionen!]`;
+                } else {
+                    finalDirective = `\n\n[WICHTIGE ANWEISUNG: Der Benutzer hat die finale Erstellung bestätigt. Geben Sie JETZT DIREKT und AUSSCHLIESSLICH BEIDE vollständigen finalen Rechtstexte in den XML-Tags <IMPRESSUM_FINAL>...</IMPRESSUM_FINAL> und <DATENSCHUTZ_FINAL>...</DATENSCHUTZ_FINAL> aus. Keine weiteren Fragen oder Optionen!]`;
+                }
+            }
+
             const profileReminder = `\n\n[SYSTEM-REMINDER AN DAS MODELL:
 1. Profil-Stammdaten: Name="${this.userProfile?.name || 'Pascal Pander'}", Anschrift="${this.userProfile?.street || ''}, ${this.userProfile?.zipCode || ''} ${this.userProfile?.city || ''}", E-Mail="${this.userProfile?.email || ''}". Nutzungstyp=${this.isCommercial !== false ? 'Kommerziell' : 'Gratis/Privat'}.
-2. QUALITÄTS-REGEL FÜR DATENSCHUTZ: Dies ist ein datensparsames Projekt ohne eigenes Backend und ohne Tracking! Behaupten Sie NIEMALS: „unsere IT-Systeme erfassen Daten“ oder „USA ist kein sicherer Drittstaat“ (das EU-U.S. Data Privacy Framework gilt!). Stellen Sie klar, dass der Betreiber selbst KEINERLEI personenbezogene Daten erhebt/speichert und nur der Webhoster (GitHub Pages) technisch bedingte Server-Logfiles verarbeitet.
-Verwenden Sie NIEMALS die Überschriften „Datenschutz auf einen Blick“ oder „Allgemeine Hinweise und Pflichtinformationen“! Beginnen Sie die Datenschutzerklärung DIREKT mit „**1. Verantwortlicher im Sinne der Datenschutzgesetze**“ und folgen Sie exakt den 12 nummerierten Punkten!
+2. PFLICHT-VORGABEN FÜR DIE DATENSCHUTZERKLÄRUNG:
+- ${detectedServicesSummary}
+- Soweit rein technisch notwendige Werte lokal im Speicher abgelegt werden (z. B. Einstellungen im localStorage), erfolgt dies auf Grundlage von § 25 Abs. 2 Nr. 2 TDDDG (kein Cookie-Banner nötig).
+- Behaupten Sie NIEMALS: „USA ist kein sicherer Drittstaat“ (das EU-U.S. Data Privacy Framework gilt für zertifizierte US-Dienste wie Google oder GitHub!).
+- Verwenden Sie NIEMALS die verbotenen Überschriften „Datenschutz auf einen Blick“ oder „Allgemeine Hinweise und Pflichtinformationen“! Beginnen Sie die Datenschutzerklärung DIREKT mit „**1. Verantwortlicher im Sinne der Datenschutzgesetze**“ und folgen Sie exakt dem 12-Punkte-Aufbau!
 3. Wenn der Entwurf fertig ist oder der Benutzer die Erstellung wünscht, geben Sie die finalen Dokumente in den XML-Tags aus:
 <IMPRESSUM_FINAL>
 [Vollständiges Impressum nach § 5 DDG]
 </IMPRESSUM_FINAL>
 
 <DATENSCHUTZ_FINAL>
-[Vollständige Datenschutzerklärung gem. obigem Blueprint]
+[Vollständige Datenschutzerklärung mit allen Pflichtklauseln inklusive der erkannten Dienste]
 </DATENSCHUTZ_FINAL>]`;
 
-            const promptMessage = `${message}${profileReminder}`;
+            const promptMessage = `${message}${finalDirective}${profileReminder}`;
 
             const response = await this.chat.sendMessage({
                 message: promptMessage,
-                config: {
-                    thinkingConfig: this.getThinkingConfig()
-                }
+                config: this.getChatConfig()
             });
-            return response.text || '';
+            return this.extractResponseText(response);
         });
     }
 }
