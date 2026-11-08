@@ -71,8 +71,8 @@ export class LegalGenChatService {
         this.isCommercial = isCommercial;
         this.onModelFallback = onModelFallback;
         this.ai = new GoogleGenAI({ apiKey: apiKey });
-        // Falls ein veraltetes Modell (gemini-1.x, gemini-2.x) übergeben wurde, auf gemini-3.5-flash-lite migrieren
-        const normalizedModel = (!model || model.startsWith('gemini-1.') || model.startsWith('gemini-2.'))
+        // Falls ein tatsächlich abgeschaltetes Modell (gemini-1.x oder gemini-2.0) übergeben wurde, migrieren
+        const normalizedModel = (!model || model.startsWith('gemini-1.') || model === 'gemini-2.0-flash' || model === 'gemini-2.0-flash-lite')
             ? 'gemini-3.5-flash-lite'
             : model;
         this.currentModel = normalizedModel;
@@ -118,50 +118,71 @@ export class LegalGenChatService {
             Fragen Sie NIEMALS nach Design, UX, Programmierung, Zeitplan, Budget, Prioritäten oder allgemeinen Projektzielen! Das ist absolut verboten!
             Jede einzelne Frage MUSS sich direkt und ausschließlich auf rechtliche Pflichtangaben für Impressum oder Datenschutzerklärung beziehen (z. B. Hosting-Provider, Kontaktformulare, Cookies/Tracking, Analysetools, Newsletter).
 
-            STRIKTE QUALITÄTS- & STRUKTUR-VORGABEN FÜR DIE RECHTSTEXTE:
+            STRIKTE QUALITÄTS- & STRUKTUR-VORGABEN FÜR DIE RECHTSTEXTE (EXAKTER 12-PUNKTE-GOLDSTANDARD):
 
             AUFBAU-BLUEPRINT FÜR DIE DATENSCHUTZERKLÄRUNG (Art. 13 DSGVO & TDDDG):
-            Wenn das Projekt eine clientseitige Web-App, Entwickler-Tools, GitHub-Pages-Seite oder Software ohne eigenes Tracking/Backend ist, MUSS die Datenschutzerklärung exakt dieser modernen, sauberen und wahrheitsgemäßen Struktur folgen:
+            Sie MÜSSEN die Datenschutzerklärung exakt nach folgendem bewährten 12-Punkte-Aufbau strukturieren:
 
             # Datenschutzerklärung
 
-            ## 1. Verantwortlicher
-            Verantwortlicher im Sinne der Datenschutz-Grundverordnung (DSGVO) und des Digitale-Dienste-Gesetzes (DDG):
+            **1. Verantwortlicher im Sinne der Datenschutzgesetze**
             ${profile.name || 'Pascal Pander'}
             ${profile.street || ''}
             ${profile.zipCode || ''} ${profile.city || ''}
             E-Mail: ${profile.email || ''}
 
-            ## 2. Bereitstellung der Website und Server-Logfiles (Hosting)
-            Unsere Website bzw. Web-App wird über **GitHub Pages** (Dienst der GitHub Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA – Tochtergesellschaft der Microsoft Corporation) bereitgestellt.
-            Beim Aufruf der Website erfasst der Webserver des Hosters automatisch technische Informationen in Server-Logfiles (IP-Adresse, Datum/Uhrzeit, abgerufene Datei, Browsertyp, Betriebssystem).
-            - Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der technisch fehlerfreien Bereitstellung, Systemsicherheit und Stabilität).
-            - Datenübermittlung in die USA: GitHub Inc. bzw. Microsoft Corporation ist nach dem **EU-U.S. Data Privacy Framework (DPF)** zertifiziert. Für Übermittlungen an DPF-zertifizierte US-Unternehmen besteht ein rechtsgültiger Angemessenheitsbeschluss der Europäischen Kommission (Art. 45 DSGVO).
-            - WICHTIG: Behaupten Sie NIEMALS die veraltete Unwahrheit „die USA sind kein sicherer Drittstaat“!
+            **2. Allgemeines zur Datenverarbeitung**
+            Wir legen größten Wert auf den Schutz Ihrer Daten und die Wahrung Ihrer Privatsphäre. Diese Datenschutzerklärung informiert Sie darüber, welche personenbezogenen Daten bei der Nutzung unseres Projekts bzw. unserer Web-App „${projectName}“ erhoben, verarbeitet und genutzt werden. Personenbezogene Daten sind alle Informationen, die sich auf eine identifizierte oder identifizierbare natürliche Person beziehen.
+            Ihre Daten werden im Rahmen der gesetzlichen Vorschriften, insbesondere der Datenschutz-Grundverordnung (DSGVO), des Telekommunikation-Digitale-Dienste-Datenschutz-Gesetzes (TDDDG) und des Bundesdatenschutzgesetzes (BDSG), verarbeitet.
 
-            ## 3. Kein eigener Backend-Server, kein Tracking, keine Datenerfassung durch den Betreiber
-            Wir als Betreiber dieser Website bzw. Web-App erheben, speichern und verarbeiten **keinerlei personenbezogene Daten**:
-            - Es gibt **keine Benutzerkonten** und keine Registrierung.
-            - Es werden **keine Kontaktformulare** oder Chat-Widgets angeboten.
-            - Es werden **keinerlei Tracking-, Analyse- oder Marketing-Tools** (wie Google Analytics, Matomo etc.) eingesetzt.
-            - Es sind **keine Social-Media-Plugins** oder Werbenetzwerke eingebunden.
-            - Alle Berechnungen und Datenverarbeitungen finden ausschließlich **lokal im Webbrowser auf dem Endgerät des Nutzers** statt. Es werden keine Telemetriedaten übertragen.
+            **3. Hosting und Bereitstellung der Web-App**
+            Unsere Web-App wird über GitHub Pages gehostet. Beim Aufruf unserer Web-App werden Daten (z. B. IP-Adresse, Zugriffszeit, aufgerufene URL, Browserinformationen) an den Hosting-Anbieter übermittelt und dort gespeichert, um die technische Bereitstellung der Web-App zu ermöglichen.
+            * **Dienstanbieter:** GitHub, Inc. (eine Tochtergesellschaft der Microsoft Corporation), 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA (bzw. für Nutzer im EWR: GitHub B.V., Amsterdam, Niederlande).
+            * **Zweck:** Bereitstellung der Web-App, Sicherstellung der technischen Funktionalität und Sicherheit.
+            * **Rechtsgrundlage:** Unser berechtigtes Interesse an einer sicheren und effizienten Bereitstellung unserer Web-App (Art. 6 Abs. 1 lit. f DSGVO).
+            * **Datenübermittlung in die USA:** GitHub Inc. bzw. Microsoft Corporation ist nach dem **EU-U.S. Data Privacy Framework (DPF)** zertifiziert, wofür ein Angemessenheitsbeschluss der EU-Kommission gem. Art. 45 DSGVO vorliegt. (Schreiben Sie niemals die veraltete Behauptung, die USA seien kein sicherer Drittstaat!).
 
-            ## 4. Cookies und lokale Speicherung
-            - **Keine Cookies:** Diese Website verwendet keine zustimmungspflichtigen oder nicht-notwendigen Cookies.
-            - **Lokale Speicherung (localStorage / IndexedDB):** Soweit die Anwendung Einstellungen oder Verläufe lokal im Browser speichert, erfolgt dies ausschließlich über die Web-Storage-Technologie auf Ihrer Endeinrichtung (§ 25 Abs. 2 Nr. 2 TDDDG – technisch erforderlich, keine Übertragung an Server).
+            **4. SSL-/TLS-Verschlüsselung**
+            Aus Sicherheitsgründen und zum Schutz der Übertragung vertraulicher Inhalte, die Sie an uns senden, nutzt unsere Web-App eine SSL- bzw. TLS-Verschlüsselung. Dies erkennen Sie daran, dass die Adresszeile des Browsers von „http://“ auf „https://“ wechselt und an dem Schloss-Symbol in Ihrer Browserzeile. Wenn die SSL- bzw. TLS-Verschlüsselung aktiviert ist, können die Daten, die Sie an uns übermitteln, nicht von Dritten mitgelesen werden.
 
-            ## 5. Rechte der betroffenen Personen
-            Ihnen stehen nach der DSGVO folgende Rechte zu:
-            - **Auskunftsrecht (Art. 15 DSGVO):** Recht auf Auskunft über Ihre verarbeiteten Daten.
-            - **Berichtigungsrecht (Art. 16 DSGVO):** Recht auf Berichtigung unrichtiger Daten.
-            - **Löschungsrecht (Art. 17 DSGVO):** Recht auf Löschung („Recht auf Vergessenwerden“).
-            - **Einschränkung der Verarbeitung (Art. 18 DSGVO)**
-            - **Widerspruchsrecht (Art. 21 DSGVO):** Recht auf Widerspruch gegen Verarbeitungen gem. Art. 6 Abs. 1 lit. f DSGVO.
-            - **Beschwerderecht (Art. 77 DSGVO):** Recht auf Beschwerde bei einer Datenschutz-Aufsichtsbehörde.
+            **5. Erfassung allgemeiner Daten und Informationen (Server-Logfiles)**
+            Bei jedem Aufruf unserer Web-App erfasst das System automatisiert Daten und Informationen vom Computersystem des aufrufenden Rechners (IP-Adresse des Nutzers, Datum und Uhrzeit des Zugriffs, Name und URL der abgerufenen Datei, Informationen über den Browsertyp und die verwendete Version, das Betriebssystem des Nutzers, Referrer URL).
+            * **Zweck:** Die Speicherung in Logfiles dient der Sicherstellung der Funktionsfähigkeit der Web-App und zur Gewährleistung der Sicherheit unserer informationstechnischen Systeme. Eine Auswertung der Daten zu Marketingzwecken findet nicht statt.
+            * **Rechtsgrundlage:** Berechtigtes Interesse gem. Art. 6 Abs. 1 lit. f DSGVO.
+            * **Speicherdauer:** Die Daten verbleiben auf den Webservern des Hosters und werden gelöscht bzw. anonymisiert, sobald sie für den Zweck nicht mehr erforderlich sind.
 
-            ## 6. Stand der Datenschutzerklärung
-            Stand: ${currentMonthYear}
+            **6. Einsatz von Cookies und vergleichbaren Technologien**
+            * **Art der Cookies:** Wir setzen keine Marketing-, Tracking- oder Profiling-Cookies ein.
+            * **Einwilligungsfreiheit (§ 25 Abs. 2 TDDDG):** Soweit rein technisch notwendige Werte lokal im Speicher abgelegt werden (z. B. Einstellungen im localStorage), ist gemäß § 25 Abs. 2 Nr. 2 TDDDG keine gesonderte Einwilligung erforderlich. Ein Cookie-Banner ist daher nicht implementiert.
+            * **Rechtsgrundlage:** Berechtigtes Interesse gem. Art. 6 Abs. 1 lit. f DSGVO i.V.m. § 25 Abs. 2 TDDDG.
+
+            **7. Externe Dienste und Inhalte**
+            ${detectedServices && detectedServices.length > 0 ? `Im Quellcode wurden folgende genutzte Dienste erkannt:\n${detectedServices.map(s => `- ${s}`).join('\n')}\n(Stellen Sie diese Dienste einzeln mit Anbieter, Zweck und Rechtsgrundlage dar.)` : 'Im Quellcode der Anwendung sind keine externen Drittanbieter-Tools, Schriftenserver (wie Google Fonts) oder APIs eingebunden. Alle Schriften und Assets werden lokal ausgeliefert.'}
+
+            **8. Ihre Rechte als betroffene Person**
+            Sie haben als betroffene Person nach der DSGVO folgende Rechte:
+            * **Recht auf Auskunft (Art. 15 DSGVO)**
+            * **Recht auf Berichtigung (Art. 16 DSGVO)**
+            * **Recht auf Löschung („Recht auf Vergessenwerden“) (Art. 17 DSGVO)**
+            * **Recht auf Einschränkung der Verarbeitung (Art. 18 DSGVO)**
+            * **Recht auf Datenübertragbarkeit (Art. 20 DSGVO)**
+            * **Recht auf Widerspruch (Art. 21 DSGVO)**
+            * **Recht auf Widerruf einer datenschutzrechtlichen Einwilligung (Art. 7 Abs. 3 DSGVO)**
+            * **Recht auf Beschwerde bei einer Aufsichtsbehörde (Art. 77 DSGVO)**
+
+            **9. Keine Verwendung von Kontaktformularen, Newsletter-Diensten oder Social Media Plugins**
+            Auf unserer Web-App sind keine Kontaktformulare, Newsletter-Dienste oder Social Media Plugins (wie Facebook Like-Buttons) integriert. Dementsprechend werden über solche Funktionen keine personenbezogenen Daten erhoben oder verarbeitet.
+
+            **10. Keine Verwendung von Tracking- oder Analyse-Software**
+            Wir verwenden auf unserer Web-App keine Tracking- oder Analyse-Software wie Google Analytics oder Matomo. Es werden keine Daten zu Ihrem Nutzerverhalten erfasst.
+
+            **11. Keine Verwendung von eingebetteten Videos (YouTube/Vimeo)**
+            Es sind keine Videos von Plattformen wie YouTube oder Vimeo in unsere Web-App eingebettet.
+
+            **12. Änderungen dieser Datenschutzerklärung**
+            Wir behalten uns vor, diese Datenschutzerklärung anzupassen, damit sie stets den aktuellen rechtlichen Anforderungen entspricht.
+
+            **Stand:** ${currentMonthYear}
 
             AUFBAU-BLUEPRINT FÜR DAS IMPRESSUM (§ 5 DDG):
             # Impressum
