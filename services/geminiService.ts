@@ -6,9 +6,15 @@ export function formatGeminiError(err: any, currentModel?: string): string {
     const raw = err?.message || String(err || '');
     if (raw.includes('429') || raw.includes('RESOURCE_EXHAUSTED') || raw.includes('quota')) {
         const isDaily = raw.includes('limit: 20') || raw.includes('limit: 1500') || raw.includes('per day');
-        if (isDaily || currentModel === 'gemini-2.5-flash') {
-            return 'Das Tageskontingent für dieses Modell im kostenlosen Free-Tier von Google AI Studio wurde erreicht. Tipp: Nutzen Sie „gemini-3.6-flash“ (1.500 kostenlose Anfragen pro Tag) oder hinterlegen Sie einen API-Key mit Abrechnung.';
+        
+        if (currentModel === 'gemini-2.5-flash') {
+            return 'Das Tageskontingent für „gemini-2.5-flash“ (nur 20 Anfragen pro Tag im Free-Tier) ist für heute aufgebraucht. Bitte stellen Sie in den App-Einstellungen auf „gemini-3.6-flash“ um oder nutzen Sie einen Key mit Abrechnung.';
         }
+        
+        if (isDaily || raw.includes('quota')) {
+            return 'Das Tageskontingent für diesen Google AI Studio API-Key im kostenlosen Free-Tier ist für heute aufgebraucht (wird täglich um 09:00 Uhr MEZ zurückgesetzt). Tipp: In Google AI Studio (aistudio.google.com) können Sie unter „Get API key“ mit 1 Klick ein neues Projekt mit neuem kostenlosen API-Key erstellen (sofort wieder 1.500 freie Anfragen) oder Abrechnung (Pay-as-you-go) aktivieren.';
+        }
+        
         return 'Kurze Pause: Die Minutengrenze von Google AI Studio (maximal 15 Anfragen pro Minute im kostenlosen Free-Tier) wurde kurz erreicht. Bitte warten Sie 20–30 Sekunden und klicken Sie dann einfach noch einmal auf Senden.';
     }
     if (raw.includes('API_KEY_INVALID') || raw.includes('API key not valid')) {
