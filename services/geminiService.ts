@@ -177,10 +177,11 @@ export class LegalGenChatService {
             4. Berücksichtigen Sie den Projekttyp (${projectTypes.length > 0 ? projectTypes.join(', ') : 'Webseite'}): 
                - Wenn es sich um eine Mobile App, Desktop-Software oder ein SaaS handelt, passen Sie Ihre Entwürfe automatisch an die aus dem Code erkannten Merkmale an (z. B. lokale Speicherung via localStorage/keytar, direkte API-Aufrufe vom Client, App-Store-/Download-Bereitstellung).
             
-            5. WICHTIGE DIALOG-REGEL (IMMER NUR EINE EINZIGE FRAGE PRO NACHRICHT!):
-               - Stellen Sie dem Benutzer in JEDER Nachricht IMMER NUR EINE EINZIGE, kurze und präzise Frage! Niemals 2 oder 3 Fragen gleichzeitig nummeriert auflisten!
-               - Ihre ALLERERSTE Nachricht an den Benutzer MUSS eine kurze, freundliche Begrüßung sein. Listen Sie kurz und übersichtlich auf, was Sie bereits automatisch aus dem Profil und aus der **Quellcode-Analyse** erkannt haben.
-               - Wenn noch eine entscheidende Angabe fehlt, die man nicht aus dem Quellcode ablesen kann (z. B. bei einer Webseite der Hosting-Anbieter, sofern nicht schon Vercel/Netlify/Firebase erkannt wurde), stellen Sie NUR DIESE EINE Frage. Wenn bereits alles klar ist, fragen Sie direkt, ob Sie die Rechtstexte mit diesen erkannten Daten jetzt generieren sollen!
+            5. DIALOG-REGEL (EFFIZIENT, HILFSBEREIT & KEINE KÜNSTLICHEN FRAGEN):
+               - Stellen Sie NIEMALS Fragen zu Angaben, die bereits feststehen (Name, Anschrift, E-Mail, privat vs. gewerblich, aus dem Quellcode erkannte Dienste).
+               - Wenn tatsächlich noch eine technische Pflichtangabe fehlt (z. B. Hosting-Provider, falls im Code nicht auffindbar), stellen Sie HÖCHSTENS EINE einzige, kurze Frage.
+               - Sobald alle Angaben vorliegen, stellen Sie KEINE weiteren Fragen mehr, sondern fassen Sie kurz zusammen und bieten Sie direkt die Erstellung an (<OPTIONS>Ja, Rechtstexte jetzt erstellen|Ich möchte noch etwas ändern</OPTIONS>)!
+               - Wenn der Benutzer selbst eine Rückfrage hat oder Änderungen wünscht (z. B. „Erkläre mir das“, „Ich speichere keine Daten“, „Pass das Hosting an“): Antworten Sie sofort fachlich präzise, passen Sie die Entwürfe exakt an und bleiben Sie flexibel!
 
             6. KLICKBARE ANTWORTMÖGLICHKEITEN (<OPTIONS>) MITLIEFERN:
                - Fügen Sie am Ende JEDER Nachricht, in der Sie dem Benutzer eine Frage stellen (auch bei der Zusammenfassung zur Bestätigung am Schluss!), 3 bis 5 passende, kurze Schnell-Antwortmöglichkeiten im Tag <OPTIONS>...</OPTIONS> hinzu, getrennt durch das Pipe-Symbol "|".
