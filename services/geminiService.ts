@@ -118,6 +118,12 @@ export class LegalGenChatService {
             Fragen Sie NIEMALS nach Design, UX, Programmierung, Zeitplan, Budget, Prioritäten oder allgemeinen Projektzielen! Das ist absolut verboten!
             Jede einzelne Frage MUSS sich direkt und ausschließlich auf rechtliche Pflichtangaben für Impressum oder Datenschutzerklärung beziehen (z. B. Hosting-Provider, Kontaktformulare, Cookies/Tracking, Analysetools, Newsletter).
 
+            VERBOTENE FORMATE & STRUKTUREN (STRENGSTENS UNTERSAGT):
+            - Verwenden Sie NIEMALS die Überschrift oder den Abschnitt „Datenschutz auf einen Blick“!
+            - Verwenden Sie NIEMALS die Überschrift „Allgemeine Hinweise und Pflichtinformationen“!
+            - Verwenden Sie NIEMALS den Frage-Antwort-Block „Datenerfassung auf dieser Website“ („Wer ist verantwortlich?“, „Wie erfassen wir Ihre Daten?“, „Wofür nutzen wir Ihre Daten?“)!
+            - Die Datenschutzerklärung MUSS ZWINGEND und AUSNAHMSLOS direkt mit „**1. Verantwortlicher im Sinne der Datenschutzgesetze**“ beginnen und exakt den 12 nummerierten Punkten folgen!
+
             STRIKTE QUALITÄTS- & STRUKTUR-VORGABEN FÜR DIE RECHTSTEXTE (EXAKTER 12-PUNKTE-GOLDSTANDARD):
 
             AUFBAU-BLUEPRINT FÜR DIE DATENSCHUTZERKLÄRUNG (Art. 13 DSGVO & TDDDG):
@@ -436,6 +442,7 @@ ${hasProfileData ? `- Nennen Sie die Stammdaten des Benutzers (${this.userProfil
             const profileReminder = `\n\n[SYSTEM-REMINDER AN DAS MODELL:
 1. Profil-Stammdaten: Name="${this.userProfile?.name || 'Pascal Pander'}", Anschrift="${this.userProfile?.street || ''}, ${this.userProfile?.zipCode || ''} ${this.userProfile?.city || ''}", E-Mail="${this.userProfile?.email || ''}". Nutzungstyp=${this.isCommercial !== false ? 'Kommerziell' : 'Gratis/Privat'}.
 2. QUALITÄTS-REGEL FÜR DATENSCHUTZ: Dies ist ein datensparsames Projekt ohne eigenes Backend und ohne Tracking! Behaupten Sie NIEMALS: „unsere IT-Systeme erfassen Daten“ oder „USA ist kein sicherer Drittstaat“ (das EU-U.S. Data Privacy Framework gilt!). Stellen Sie klar, dass der Betreiber selbst KEINERLEI personenbezogene Daten erhebt/speichert und nur der Webhoster (GitHub Pages) technisch bedingte Server-Logfiles verarbeitet.
+Verwenden Sie NIEMALS die Überschriften „Datenschutz auf einen Blick“ oder „Allgemeine Hinweise und Pflichtinformationen“! Beginnen Sie die Datenschutzerklärung DIREKT mit „**1. Verantwortlicher im Sinne der Datenschutzgesetze**“ und folgen Sie exakt den 12 nummerierten Punkten!
 3. Wenn der Entwurf fertig ist oder der Benutzer die Erstellung wünscht, geben Sie die finalen Dokumente in den XML-Tags aus:
 <IMPRESSUM_FINAL>
 [Vollständiges Impressum nach § 5 DDG]
