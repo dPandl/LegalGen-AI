@@ -227,12 +227,12 @@ export default function App() {
     const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('legalgen_api_key') || '');
     const [isKeyLoaded, setIsKeyLoaded] = useState<boolean>(true);
     const [model, setModel] = useState<string>(() => {
-        const savedModel = localStorage.getItem('legalgen_model') || 'gemini-3.5-flash-lite';
-        if (savedModel.startsWith('gemini-1.') || savedModel.startsWith('gemini-2.')) {
-            localStorage.setItem('legalgen_model', 'gemini-3.5-flash-lite');
-            return 'gemini-3.5-flash-lite';
+        const savedModel = localStorage.getItem('legalgen_model') || 'gemini-3.6-flash';
+        if (savedModel === 'gemini-2.5-flash' || savedModel === 'gemini-3.6-flash') {
+            return savedModel;
         }
-        return savedModel;
+        localStorage.setItem('legalgen_model', 'gemini-3.6-flash');
+        return 'gemini-3.6-flash';
     });
 
     const [modelFallbackNotification, setModelFallbackNotification] = useState<{

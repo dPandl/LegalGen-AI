@@ -314,7 +314,7 @@ export const AppSettingsEditor: React.FC<AppSettingsEditorProps> = ({
                             <section className="settings-section">
                                 <h4>KI-Modell</h4>
                                 <p>
-                                    Wählen Sie das Gemini-Modell für die Rechtstexte-Generierung aus. <strong>gemini-3.8-flash</strong> bietet volle 1.500 kostenlose Anfragen pro Tag im Free-Tier.
+                                    Wählen Sie das Gemini-Modell für die Rechtstexte-Generierung aus. <strong>gemini-3.6-flash</strong> bietet volle 1.500 kostenlose Anfragen pro Tag im Free-Tier. <strong>gemini-2.5-flash</strong> ist der bewährte Klassiker.
                                 </p>
                                 <div className="space-y-4">
                                     <div>
@@ -324,11 +324,8 @@ export const AppSettingsEditor: React.FC<AppSettingsEditorProps> = ({
                                             onChange={(e) => setLocalModel(e.target.value)}
                                             className="modal-input bg-white"
                                         >
-                                            <option value="gemini-2.5-flash">gemini-2.5-flash (Bewährter Klassiker)</option>
-                                            <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Blitzschnell: ~1–3 Sek. – Empfohlen für schnellen Dialog)</option>
-                                            <option value="gemini-3.6-flash">gemini-3.6-flash (Schnell & Ausgewogen)</option>
-                                            <option value="gemini-3.8-flash">gemini-3.8-flash (Reasoning-Modell für komplexe Fälle)</option>
-                                            <option value="gemini-3.8-pro">gemini-3.8-pro (Für anspruchsvolle juristische Analysen)</option>
+                                            <option value="gemini-3.6-flash">gemini-3.6-flash (Empfohlen – Schnell, 1.500 Anfragen/Tag)</option>
+                                            <option value="gemini-2.5-flash">gemini-2.5-flash (Prime-Klassiker – 20 Anfragen/Tag im Free-Tier)</option>
                                         </select>
                                     </div>
 

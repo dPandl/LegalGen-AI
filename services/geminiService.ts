@@ -5,13 +5,13 @@ import { DDG_PARAGRAPH_5_TEXT, DSGVO_ART_13_TEXT } from '../constants';
 export function formatGeminiError(err: any): string {
     const raw = err?.message || String(err || '');
     if (raw.includes('429') || raw.includes('RESOURCE_EXHAUSTED') || raw.includes('quota') || raw.includes('limit: 20')) {
-        return 'Das Kontingent für das gewählte Modell im kostenlosen Free-Tier von Google AI Studio wurde erreicht. Tipp: Nutzen Sie „gemini-3.8-flash“ oder hinterlegen Sie einen API-Key mit Abrechnung.';
+        return 'Das Kontingent für das gewählte Modell im kostenlosen Free-Tier von Google AI Studio wurde erreicht. Tipp: Nutzen Sie „gemini-3.6-flash“ (1.500 kostenlose Anfragen pro Tag) oder hinterlegen Sie einen API-Key mit Abrechnung.';
     }
     if (raw.includes('API_KEY_INVALID') || raw.includes('API key not valid')) {
         return 'Ungültiger Google Gemini API-Key. Bitte prüfen Sie den Key in den Einstellungen.';
     }
     if (raw.includes('no longer available') || raw.includes('not found')) {
-        return 'Das gewählte Modell ist nicht mehr verfügbar. Die App wurde automatisch auf das aktuelle „gemini-3.8-flash“ umgestellt.';
+        return 'Das gewählte Modell ist nicht mehr verfügbar. Die App wurde automatisch auf das aktuelle „gemini-3.6-flash“ umgestellt.';
     }
     try {
         const parsed = JSON.parse(raw);
@@ -71,10 +71,10 @@ export class LegalGenChatService {
         this.isCommercial = isCommercial;
         this.onModelFallback = onModelFallback;
         this.ai = new GoogleGenAI({ apiKey: apiKey });
-        // Falls ein tatsächlich abgeschaltetes Modell (gemini-1.x oder gemini-2.0) übergeben wurde, migrieren
-        const normalizedModel = (!model || model.startsWith('gemini-1.') || model === 'gemini-2.0-flash' || model === 'gemini-2.0-flash-lite')
-            ? 'gemini-3.5-flash-lite'
-            : model;
+        // Nur gemini-3.6-flash und gemini-2.5-flash sind erlaubt
+        const normalizedModel = (model === 'gemini-2.5-flash' || model === 'gemini-3.6-flash')
+            ? model
+            : 'gemini-3.6-flash';
         this.currentModel = normalizedModel;
 
         const baseDdgText = ddgText || DDG_PARAGRAPH_5_TEXT;
@@ -390,15 +390,16 @@ export class LegalGenChatService {
                 raw.includes('not found') ||
                 raw.includes('limit: 20');
 
-            if (isUnavailableOrQuota && this.currentModel !== 'gemini-3.5-flash-lite') {
+            if (isUnavailableOrQuota && this.currentModel !== 'gemini-3.6-flash') {
                 const oldModel = this.currentModel;
-                console.warn(`Modell ${oldModel} nicht verfügbar oder Quota erreicht, wechsle automatisch auf Standard gemini-3.5-flash-lite...`);
-                this.currentModel = 'gemini-3.5-flash-lite';
-                this.onModelFallback?.('gemini-3.5-flash-lite', `Modell ${oldModel} ist nicht verfügbar oder Limit erreicht.`);
+                console.warn(`Modell ${oldModel} nicht verfügbar oder Quota erreicht, wechsle automatisch auf Standard gemini-3.6-flash...`);
+                this.currentModel = 'gemini-3.6-flash';
+                this.onModelFallback?.('gemini-3.6-flash', `Tageslimit für ${oldModel} erreicht. Automatisch auf gemini-3.6-flash umgestellt.`);
                 this.chat = this.ai.chats.create({
-                    model: 'gemini-3.5-flash-lite',
+                    model: 'gemini-3.6-flash',
                     config: {
                         systemInstruction: this.systemInstruction,
+                        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
                     },
                 });
                 return await action();
@@ -408,13 +409,10 @@ export class LegalGenChatService {
     }
 
     private getThinkingConfig() {
-        if (this.currentModel.includes('flash-lite')) {
-            return undefined;
+        if (this.currentModel === 'gemini-2.5-flash') {
+            return { thinkingBudget: 0 };
         }
-        const isGemini3 = this.currentModel.includes('3.') || this.currentModel.includes('3-') || this.currentModel.includes('gemini-3');
-        return isGemini3
-            ? { thinkingLevel: ThinkingLevel.LOW }
-            : { thinkingBudget: 0 };
+        return { thinkingLevel: ThinkingLevel.LOW };
     }
 
     async startConversation(): Promise<string> {
