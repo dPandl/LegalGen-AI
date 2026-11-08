@@ -9,10 +9,15 @@ const parseMessageContent = (raw: string): { cleanText: string; options: string[
         return { cleanText: raw.trim(), options: [] };
     }
     const cleanText = raw.replace(/<OPTIONS>[\s\S]*?<\/OPTIONS>/gi, '').trim();
-    const options = match[1]
-        .split('|')
-        .map(o => o.trim())
-        .filter(Boolean);
+    const rawOptions = match[1].trim();
+    let options: string[] = [];
+    if (rawOptions.includes('|')) {
+        options = rawOptions.split('|').map(o => o.trim()).filter(Boolean);
+    } else if (rawOptions.includes('\n')) {
+        options = rawOptions.split('\n').map(o => o.replace(/^[-*•\d.)\s]+/, '').trim()).filter(Boolean);
+    } else {
+        options = [rawOptions];
+    }
     return { cleanText, options };
 };
 

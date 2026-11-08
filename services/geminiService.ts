@@ -38,6 +38,7 @@ export class LegalGenChatService {
     private ai: GoogleGenAI;
     private systemInstruction: string;
     private currentModel: string;
+    private projectName: string;
     private onModelFallback?: (newModel: string, reason: string) => void;
     public documentMode: 'both' | 'impressum' | 'datenschutz';
 
@@ -63,6 +64,7 @@ export class LegalGenChatService {
         }
 
         this.documentMode = documentMode;
+        this.projectName = projectName;
         this.onModelFallback = onModelFallback;
         this.ai = new GoogleGenAI({ apiKey: apiKey });
         // Falls ein veraltetes Modell (gemini-1.x, gemini-2.x) übergeben wurde, auf gemini-3.5-flash-lite migrieren
@@ -106,9 +108,13 @@ export class LegalGenChatService {
         ` : '';
 
         const systemInstruction = `
-            Sie sind ein hilfreicher, dialogorientierter KI-Assistent zur Rechtstexterstellung. Sie führen den Benutzer Schritt für Schritt durch das Gespräch.
-            
-            Fokus: ${modeInstruction}
+            STRENGSTE SYSTEMREGEL – ROLLE & AUFGABE:
+            Sie sind AUSSCHLIESSLICH ein deutscher KI-Rechtstexte-Generator zur Erstellung von IMPRESSUM (§ 5 DDG) und DATENSCHUTZERKLÄRUNG (Art. 13 DSGVO & TDDDG).
+            Sie sind KEIN allgemeiner Assistent, KEIN Projektplaner, KEIN IT-Entwickler und KEIN Unternehmensberater!
+            Fragen Sie NIEMALS nach Design, UX, Programmierung, Zeitplan, Budget, Prioritäten oder allgemeinen Projektzielen! Das ist absolut verboten!
+            Jede einzelne Frage MUSS sich direkt und ausschließlich auf rechtliche Pflichtangaben für Impressum oder Datenschutzerklärung beziehen (z. B. Hosting-Provider, Kontaktformulare, Cookies/Tracking, Analysetools, Newsletter).
+
+            Fokus dieses Gesprächs: ${modeInstruction}
 
             1. Hier sind die gesetzlichen Anforderungen:
             === Impressum (§ 5 DDG) ===
@@ -297,8 +303,13 @@ export class LegalGenChatService {
 
     async startConversation(): Promise<string> {
         return await this.executeWithFallback(async () => {
+            const prompt = `Starten Sie jetzt die Rechtstexte-Erstellung (Impressum und/oder Datenschutzerklärung) für das Projekt „${this.projectName}“.
+1. Begrüßen Sie den Benutzer in 1-2 kurzen Sätzen und fassen Sie stichpunktartig zusammen, welche technischen Fakten (Projekttyp, erkannte Dienste, Profilangaben) Sie für die Rechtstexte bereits vorliegen haben.
+2. Stellen Sie genau EINE einzige, konkrete juristische Frage zu noch fehlenden Angaben (z. B. Hosting-Provider wie GitHub Pages oder Vercel, falls noch unbekannt). Falls bereits alle Angaben für die Rechtstexte vorliegen, fragen Sie direkt, ob Sie das Dokument jetzt generieren sollen.
+3. Fügen Sie am Ende IMMER 3 bis 4 klickbare Optionen im Format <OPTIONS>Option 1|Option 2|Option 3</OPTIONS> an (zwingend mit Pipe-Symbol | getrennt!).`;
+
             const response = await this.chat.sendMessage({
-                message: "Bitte begrüßen Sie den Benutzer kurz, fassen Sie die erkannten Projektdaten prägnant zusammen und stellen Sie die erste Frage (mit klickbaren <OPTIONS> am Ende).",
+                message: prompt,
                 config: {
                     thinkingConfig: this.getThinkingConfig()
                 }
