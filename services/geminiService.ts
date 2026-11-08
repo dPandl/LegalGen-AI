@@ -39,6 +39,8 @@ export class LegalGenChatService {
     private systemInstruction: string;
     private currentModel: string;
     private projectName: string;
+    private userProfile: UserProfile;
+    private isCommercial?: boolean;
     private onModelFallback?: (newModel: string, reason: string) => void;
     public documentMode: 'both' | 'impressum' | 'datenschutz';
 
@@ -65,6 +67,8 @@ export class LegalGenChatService {
 
         this.documentMode = documentMode;
         this.projectName = projectName;
+        this.userProfile = profile;
+        this.isCommercial = isCommercial;
         this.onModelFallback = onModelFallback;
         this.ai = new GoogleGenAI({ apiKey: apiKey });
         // Falls ein veraltetes Modell (gemini-1.x, gemini-2.x) übergeben wurde, auf gemini-3.5-flash-lite migrieren
@@ -310,10 +314,13 @@ export class LegalGenChatService {
 
     async startConversation(): Promise<string> {
         return await this.executeWithFallback(async () => {
+            const hasProfileData = Boolean(this.userProfile?.name && this.userProfile?.email);
             const prompt = `Starten Sie jetzt die Rechtstexte-Erstellung (Impressum und/oder Datenschutzerklärung) für das Projekt „${this.projectName}“.
 1. Begrüßen Sie den Benutzer in 1-2 kurzen Sätzen und fassen Sie stichpunktartig zusammen, welche technischen Fakten (Projekttyp, erkannte Dienste, Profilangaben) Sie für die Rechtstexte bereits vorliegen haben.
+${hasProfileData ? `- Nennen Sie die Stammdaten des Benutzers (${this.userProfile.name}, ${this.userProfile.city || ''}, ${this.userProfile.email}) als bereits bekannt!` : ''}
 2. Stellen Sie genau EINE einzige, konkrete juristische Frage zu noch fehlenden Angaben (z. B. Hosting-Provider wie GitHub Pages oder Vercel, falls noch unbekannt). Falls bereits alle Angaben für die Rechtstexte vorliegen, fragen Sie direkt, ob Sie das Dokument jetzt generieren sollen.
-3. Fügen Sie am Ende IMMER 3 bis 4 klickbare Optionen im Format <OPTIONS>Option 1|Option 2|Option 3</OPTIONS> an (zwingend mit Pipe-Symbol | getrennt!).`;
+3. Fügen Sie am Ende IMMER 3 bis 4 klickbare Optionen im Format <OPTIONS>Option 1|Option 2|Option 3</OPTIONS> an (zwingend mit Pipe-Symbol | getrennt!).
+4. STRENGES VERBOT: Fragen Sie NIEMALS nach Name, Adresse, E-Mail, privat vs. gewerblich oder Platzhaltern!`;
 
             const response = await this.chat.sendMessage({
                 message: prompt,
@@ -327,8 +334,15 @@ export class LegalGenChatService {
 
     async sendMessage(message: string): Promise<string> {
         return await this.executeWithFallback(async () => {
+            const hasProfileData = Boolean(this.userProfile?.name && this.userProfile?.email);
+            const profileReminder = hasProfileData
+                ? `\n\n[SYSTEM-REMINDER AN DAS MODELL: Die Profil-Stammdaten liegen BEREITS VOLLSTÄNDIG vor und MÜSSEN direkt verwendet werden: Name="${this.userProfile.name}", Anschrift="${this.userProfile.street || ''}, ${this.userProfile.zipCode || ''} ${this.userProfile.city || ''}", E-Mail="${this.userProfile.email || ''}". Nutzungstyp=${this.isCommercial !== false ? 'Kommerziell' : 'Gratis/Privat'}. Fragen Sie NIEMALS nach Name, Adresse, E-Mail, privat/gewerblich oder Platzhaltern! Bieten Sie direkt die Erstellung an oder erstellen Sie die Texte.]`
+                : '';
+
+            const promptMessage = `${message}${profileReminder}`;
+
             const response = await this.chat.sendMessage({
-                message,
+                message: promptMessage,
                 config: {
                     thinkingConfig: this.getThinkingConfig()
                 }
