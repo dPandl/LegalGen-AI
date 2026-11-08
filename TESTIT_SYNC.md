@@ -1,6 +1,6 @@
 # TestIt Live-Sync: Legalgen Ai By Dp
 > **Automatische Zwei-Wege-Synchronisation zwischen Handy, Desktop & KI (Antigravity / Claude Code)**
-> - App-ID: `1793930958419` | Zuletzt aktualisiert: 9.11.2026, 00:21:59
+> - App-ID: `1793930958419` | Zuletzt aktualisiert: 9.11.2026, 00:37:48
 > - **Anweisung für KI (Antigravity / Claude Code):**
 >   1. Du kannst diese Datei jederzeit lesen, um den aktuellen Stand einzusehen.
 >   2. **Du darfst diese Datei direkt bearbeiten!** Änderungen werden sofort mit Desktop & Smartphone synchronisiert.

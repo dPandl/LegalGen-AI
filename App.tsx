@@ -895,14 +895,28 @@ export default function App() {
         total: number;
         remainingSec: number | null;
     } | null>(null);
+    const [workspaceSyncMode, setWorkspaceSyncMode] = useState<'sync' | 'append'>('sync');
     const [workspaceModalData, setWorkspaceModalData] = useState<{
         rootFolderName: string;
         items: Array<{
             scan: ScanResult;
             selected: boolean;
             existingProjectId?: string;
+            existingProjectName?: string;
+            isPathMoved?: boolean;
+            oldPath?: string;
         }>;
     } | null>(null);
+
+    const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState<boolean>(false);
+
+    const confirmDeleteAllProjects = () => {
+        saveProjectsToStorage([]);
+        setActiveProject(null);
+        setChatProject(null);
+        setShowDeleteAllConfirm(false);
+        setAppState(AppState.DASHBOARD);
+    };
 
     const handleScanWorkspaceFolder = async () => {
         try {
@@ -930,16 +944,68 @@ export default function App() {
                 return;
             }
 
+            const normalizeFolderEnd = (p?: string): string => {
+                if (!p) return '';
+                const clean = p.replace(/\\/g, '/');
+                const segments = clean.split(/[\/]/).map(s => s.trim()).filter(Boolean);
+                return segments.pop()?.toLowerCase() || '';
+            };
+
+            const normalizeAlphanumeric = (str?: string): string => {
+                if (!str) return '';
+                return str.toLowerCase().replace(/[^a-z0-9]/g, '');
+            };
+
             const items = summary.projects.map((scan) => {
-                const existing = projects.find(
-                    (p) =>
-                        (p.projectPath && p.projectPath.toLowerCase() === scan.folderPath.toLowerCase()) ||
-                        p.name.trim().toLowerCase() === scan.name.trim().toLowerCase()
+                const scanEnd = normalizeFolderEnd(scan.folderPath);
+                const scanNormName = normalizeAlphanumeric(scan.name);
+
+                // 1. Exakter Pfad
+                let existing = projects.find(
+                    (p) => p.projectPath && p.projectPath.toLowerCase() === scan.folderPath.toLowerCase()
                 );
+
+                // 2. Exakter Projektname
+                if (!existing) {
+                    existing = projects.find(
+                        (p) => p.name.trim().toLowerCase() === scan.name.trim().toLowerCase()
+                    );
+                }
+
+                // 3. Basename des Ordners (z. B. wenn der Ordner in einen Unterordner wie Kindergarten/Vorschulfuchs verschoben wurde)
+                if (!existing && scanEnd) {
+                    existing = projects.find(
+                        (p) => p.projectPath && normalizeFolderEnd(p.projectPath) === scanEnd
+                    );
+                }
+
+                // 4. Namensähnlichkeit (z. B. Slug vs. Display-Name)
+                if (!existing && scanNormName.length >= 4) {
+                    existing = projects.find((p) => {
+                        const pNorm = normalizeAlphanumeric(p.name);
+                        return pNorm && (pNorm === scanNormName || pNorm.startsWith(scanNormName) || scanNormName.startsWith(pNorm));
+                    });
+                }
+
+                // 5. Pfad-Endung
+                if (!existing) {
+                    existing = projects.find((p) => {
+                        if (!p.projectPath) return false;
+                        const pLower = p.projectPath.toLowerCase();
+                        const scanLower = scan.folderPath.toLowerCase();
+                        return scanLower.endsWith(pLower) || pLower.endsWith(scanLower);
+                    });
+                }
+
+                const isPathMoved = Boolean(existing && existing.projectPath && existing.projectPath.toLowerCase() !== scan.folderPath.toLowerCase());
+
                 return {
                     scan,
-                    selected: !existing,
-                    existingProjectId: existing?.id
+                    selected: true,
+                    existingProjectId: existing?.id,
+                    existingProjectName: existing?.name,
+                    isPathMoved,
+                    oldPath: isPathMoved ? existing?.projectPath : undefined
                 };
             });
 
@@ -996,22 +1062,54 @@ export default function App() {
                 }
             });
 
-            const updatedList = projects.map((p) => {
-                const scanUpdate = updatedExistingMap.get(p.id);
-                if (!scanUpdate) return p;
-                return {
-                    ...p,
-                    projectPath: scanUpdate.folderPath,
-                    url: p.url || scanUpdate.homepageUrl || '',
-                    detectedServices: scanUpdate.detectedServices,
-                    codeAnalysisSummary: scanUpdate.codeAnalysisSummary || p.codeAnalysisSummary,
-                    iconDataUrl: scanUpdate.iconDataUrl || p.iconDataUrl,
-                    impressum: p.impressum || scanUpdate.detectedImpressum || '',
-                    datenschutzerklaerung: p.datenschutzerklaerung || scanUpdate.detectedDatenschutz || ''
-                };
-            });
+            let finalProjectList: Project[] = [];
 
-            saveProjectsToStorage([...newProjectsToCreate, ...updatedList]);
+            if (workspaceSyncMode === 'sync') {
+                // Bei "sync": Behalte alle aktualisierten bestehenden Projekte (mit ihren alten Impressen/Datenschutzerklärungen!)
+                // PLUS neue Projekte, PLUS rein manuelle Projekte (die keinen projectPath hatten).
+                // Veraltete Duplikate mit altem/ungültigem projectPath werden automatisch entfernt!
+                const updatedExistingList: Project[] = [];
+                for (const p of projects) {
+                    const scanUpdate = updatedExistingMap.get(p.id);
+                    if (scanUpdate) {
+                        updatedExistingList.push({
+                            ...p,
+                            name: p.name || scanUpdate.name || scanUpdate.folderPath,
+                            projectPath: scanUpdate.folderPath,
+                            url: p.url || scanUpdate.homepageUrl || '',
+                            detectedServices: scanUpdate.detectedServices,
+                            codeAnalysisSummary: scanUpdate.codeAnalysisSummary || p.codeAnalysisSummary,
+                            iconDataUrl: scanUpdate.iconDataUrl || p.iconDataUrl,
+                            impressum: p.impressum || scanUpdate.detectedImpressum || '',
+                            datenschutzerklaerung: p.datenschutzerklaerung || scanUpdate.detectedDatenschutz || ''
+                        });
+                    } else if (!p.projectPath) {
+                        // Manuelles Projekt ohne Ordnerpfad bleibt erhalten
+                        updatedExistingList.push(p);
+                    }
+                }
+                finalProjectList = [...newProjectsToCreate, ...updatedExistingList];
+            } else {
+                // Bei "append": Alle alten Projekte bleiben erhalten
+                const updatedList = projects.map((p) => {
+                    const scanUpdate = updatedExistingMap.get(p.id);
+                    if (!scanUpdate) return p;
+                    return {
+                        ...p,
+                        name: p.name || scanUpdate.name || scanUpdate.folderPath,
+                        projectPath: scanUpdate.folderPath,
+                        url: p.url || scanUpdate.homepageUrl || '',
+                        detectedServices: scanUpdate.detectedServices,
+                        codeAnalysisSummary: scanUpdate.codeAnalysisSummary || p.codeAnalysisSummary,
+                        iconDataUrl: scanUpdate.iconDataUrl || p.iconDataUrl,
+                        impressum: p.impressum || scanUpdate.detectedImpressum || '',
+                        datenschutzerklaerung: p.datenschutzerklaerung || scanUpdate.detectedDatenschutz || ''
+                    };
+                });
+                finalProjectList = [...newProjectsToCreate, ...updatedList];
+            }
+
+            saveProjectsToStorage(finalProjectList);
         } catch (err) {
             console.error('Fehler beim Übernehmen der Projekte:', err);
         } finally {
@@ -1054,8 +1152,8 @@ export default function App() {
                                     type="button"
                                     onClick={handleScanWorkspaceFolder}
                                     disabled={isScanningWorkspace}
-                                    className="modal-btn-secondary inline-flex items-center gap-1.5 text-xs shadow-sm"
-                                    title="Einen Überordner (z. B. Ihren Entwicklungs-Ordner) auswählen, um alle darin enthaltenen Projekte automatisch zu erkennen"
+                                    className="modal-btn-secondary inline-flex items-center gap-1.5 text-xs shadow-sm cursor-pointer"
+                                    title="Einen Überordner (z. B. Ihren Entwicklungs-Ordner) auswählen, um alle darin enthaltenen Projekte automatisch zu synchronisieren und Duplikate zu bereinigen"
                                 >
                                     {isScanningWorkspace ? (
                                         <>
@@ -1065,10 +1163,21 @@ export default function App() {
                                     ) : (
                                         <>
                                             <FolderIcon className="w-3.5 h-3.5 text-primary-600" />
-                                            <span>Entwicklungs-Ordner scannen</span>
+                                            <span>Entwicklungs-Ordner synchronisieren</span>
                                         </>
                                     )}
                                 </button>
+                                {projects.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowDeleteAllConfirm(true)}
+                                        className="px-3 py-1.5 rounded-full text-xs font-semibold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 shadow-sm transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                                        title="Alle Projekte unwiderruflich aus der App entfernen"
+                                    >
+                                        <TrashIcon className="w-3.5 h-3.5" />
+                                        <span>Alle löschen</span>
+                                    </button>
+                                )}
                                 <span className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/85 text-slate-500 shadow-sm">
                                     <SparklesIcon className="w-3.5 h-3.5 text-primary-600" />
                                     <span>Modell:</span>
@@ -1597,6 +1706,7 @@ export default function App() {
                             handleSaveProfile(restoredProfile);
                             setActiveProject(null);
                         }}
+                        onDeleteAllProjects={() => setShowDeleteAllConfirm(true)}
                     />
                 );
             case AppState.CHAT:
@@ -1888,6 +1998,52 @@ export default function App() {
                 </div>
             )}
 
+            {/* Modal: Alle Projekte löschen */}
+            {showDeleteAllConfirm && (
+                <div className="modal-overlay" onClick={() => setShowDeleteAllConfirm(false)}>
+                    <div className="modal-dialog modal-sm" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div className="flex items-center gap-2 text-rose-600">
+                                <TrashIcon className="w-5 h-5 shrink-0" />
+                                <h3 className="modal-title text-rose-600">Alle Projekte löschen?</h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowDeleteAllConfirm(false)}
+                                className="modal-close"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="modal-body space-y-3">
+                            <p className="text-sm text-slate-700">
+                                Möchten Sie wirklich <strong>alle {projects.length} {projects.length === 1 ? 'Projekt' : 'Projekte'}</strong> unwiderruflich aus LegalGen AI entfernen?
+                            </p>
+                            <div className="text-xs text-slate-600 bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1">
+                                <p className="font-bold text-amber-800">ℹ️ Keine Sorge um Ihre Dateien:</p>
+                                <p>Ihre tatsächlichen Quellcode-Ordner und Dateien auf der Festplatte bleiben selbstverständlich <strong>völlig unberührt</strong>. Es werden lediglich die Einträge in dieser App zurückgesetzt.</p>
+                            </div>
+                        </div>
+                        <div className="modal-footer flex items-center justify-end gap-2.5">
+                            <button
+                                type="button"
+                                onClick={() => setShowDeleteAllConfirm(false)}
+                                className="modal-btn-secondary"
+                            >
+                                Abbrechen
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmDeleteAllProjects}
+                                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-sm transition-all cursor-pointer"
+                            >
+                                Ja, alle {projects.length} Projekte löschen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Workspace Scan Selection Modal */}
             {workspaceModalData && (
                 <div className="modal-overlay" onClick={() => setWorkspaceModalData(null)}>
@@ -1912,6 +2068,41 @@ export default function App() {
                         </div>
 
                         <div className="modal-body space-y-3">
+                            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                <div>
+                                    <div className="text-xs font-bold text-slate-800">Synchronisations-Modus:</div>
+                                    <div className="text-[11px] text-slate-500">
+                                        {workspaceSyncMode === 'sync'
+                                            ? 'Ordner synchronisieren: Aktualisiert Pfade & Dienste, behält Impressen/Datenschutz und bereinigt alte Duplikate automatisch.'
+                                            : 'Nur anhängen: Behält alle bisherigen Projekte unverändert bei.'}
+                                    </div>
+                                </div>
+                                <div className="inline-flex rounded-xl p-1 bg-white border border-slate-200 shadow-sm shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => setWorkspaceSyncMode('sync')}
+                                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                                            workspaceSyncMode === 'sync'
+                                                ? 'bg-primary-600 text-white shadow-sm'
+                                                : 'text-slate-600 hover:text-slate-900'
+                                        }`}
+                                    >
+                                        Synchronisieren (Duplikate bereinigen)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setWorkspaceSyncMode('append')}
+                                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                                            workspaceSyncMode === 'append'
+                                                ? 'bg-primary-600 text-white shadow-sm'
+                                                : 'text-slate-600 hover:text-slate-900'
+                                        }`}
+                                    >
+                                        Nur anhängen
+                                    </button>
+                                </div>
+                            </div>
+
                             <div className="flex items-center justify-between gap-2 pb-1">
                                 <span className="text-xs font-bold text-slate-500">
                                     {workspaceModalData.items.filter((i) => i.selected).length} von {workspaceModalData.items.length} ausgewählt
@@ -2002,9 +2193,15 @@ export default function App() {
                                                             {item.scan.name || item.scan.folderPath}
                                                         </span>
                                                         {item.existingProjectId ? (
-                                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 shrink-0">
-                                                                Bereits angelegt (Scan-Update)
-                                                            </span>
+                                                            item.isPathMoved ? (
+                                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 shrink-0" title={`Vorheriger Pfad: ${item.oldPath}`}>
+                                                                    🔄 Pfad aktualisiert
+                                                                </span>
+                                                            ) : (
+                                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 shrink-0">
+                                                                    Bereits angelegt (Scan-Update)
+                                                                </span>
+                                                            )
                                                         ) : (
                                                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 shrink-0">
                                                                 Neu
@@ -2080,10 +2277,17 @@ export default function App() {
                                 disabled={workspaceModalData.items.filter((i) => i.selected).length === 0}
                                 className="modal-btn-primary"
                             >
-                                {workspaceModalData.items.filter((i) => i.selected).length}{' '}
-                                {workspaceModalData.items.filter((i) => i.selected).length === 1
-                                    ? 'Projekt übernehmen'
-                                    : 'Projekte übernehmen'}
+                                {workspaceSyncMode === 'sync'
+                                    ? `${workspaceModalData.items.filter((i) => i.selected).length} ${
+                                          workspaceModalData.items.filter((i) => i.selected).length === 1
+                                              ? 'Projekt synchronisieren & bereinigen'
+                                              : 'Projekte synchronisieren & bereinigen'
+                                      }`
+                                    : `${workspaceModalData.items.filter((i) => i.selected).length} ${
+                                          workspaceModalData.items.filter((i) => i.selected).length === 1
+                                              ? 'Projekt übernehmen'
+                                              : 'Projekte übernehmen'
+                                      }`}
                             </button>
                         </div>
                     </div>

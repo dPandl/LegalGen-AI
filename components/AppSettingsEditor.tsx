@@ -8,7 +8,8 @@ import {
     ShieldCheckIcon,
     CheckCircleIcon,
     FolderIcon,
-    ArrowPathIcon
+    ArrowPathIcon,
+    TrashIcon
 } from '../constants';
 import type { Project, UserProfile } from '../types';
 import {
@@ -39,6 +40,7 @@ interface AppSettingsEditorProps {
     projects: Project[];
     userProfile: UserProfile;
     onRestoreBackup: (projects: Project[], profile: UserProfile) => void;
+    onDeleteAllProjects?: () => void;
 }
 
 type SettingsTab = 'ai' | 'darstellung' | 'impressum' | 'datenschutz' | 'backup';
@@ -84,7 +86,8 @@ export const AppSettingsEditor: React.FC<AppSettingsEditorProps> = ({
     onCheckLawUpdates,
     projects,
     userProfile,
-    onRestoreBackup
+    onRestoreBackup,
+    onDeleteAllProjects
 }) => {
     const [activeTab, setActiveTab] = useState<SettingsTab>('ai');
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -658,6 +661,23 @@ export const AppSettingsEditor: React.FC<AppSettingsEditorProps> = ({
                                     </div>
                                 )}
                             </section>
+
+                            {onDeleteAllProjects && projects.length > 0 && (
+                                <section className="settings-section border-rose-200 bg-rose-50/30">
+                                    <h4 className="text-rose-700">Alle Projekte zurücksetzen</h4>
+                                    <p>
+                                        Entfernt alle {projects.length} {projects.length === 1 ? 'Projekt' : 'Projekte'} unwiderruflich aus der App. Ihre tatsächlichen Quellcode-Ordner und Dateien auf der Festplatte bleiben selbstverständlich unberührt.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={onDeleteAllProjects}
+                                        className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-sm transition-all inline-flex items-center gap-2 cursor-pointer"
+                                    >
+                                        <TrashIcon className="w-4 h-4" />
+                                        <span>Alle {projects.length} Projekte löschen…</span>
+                                    </button>
+                                </section>
+                            )}
                         </>
                     )}
                 </div>
