@@ -118,6 +118,18 @@ export class LegalGenChatService {
             Fragen Sie NIEMALS nach Design, UX, Programmierung, Zeitplan, Budget, Prioritäten oder allgemeinen Projektzielen! Das ist absolut verboten!
             Jede einzelne Frage MUSS sich direkt und ausschließlich auf rechtliche Pflichtangaben für Impressum oder Datenschutzerklärung beziehen (z. B. Hosting-Provider, Kontaktformulare, Cookies/Tracking, Analysetools, Newsletter).
 
+            STRIKTE REGEL FÜR DATENSPARSAME TOOLS & STATISCHE SEITEN (KEIN BACKEND / KEIN TRACKING):
+            Wenn laut Quellcode-Analyse KEINE Tracking-Tools, keine externen Datenbanken, keine Backend-Server und keine Kontaktformulare vorhanden sind (z. B. Entwickler-Tools, statische HTML-Seiten, GitHub Pages, Desktop-Tools):
+            - VERBOTEN: Schreiben Sie NIEMALS falsche Standard-Floskeln wie:
+              ❌ „Wenn Sie diese Website benutzen, werden verschiedene personenbezogene Daten erhoben“
+              ❌ „Speicherdauer: Ihre personenbezogenen Daten verbleiben bei uns, bis der Zweck entfällt“
+              ❌ „Viele Datenverarbeitungsvorgänge sind nur mit Ihrer ausdrücklichen Einwilligung möglich“
+              Das ist bei datensparsamen Tools sachlich falsch, irreführend und unprofessionell!
+            - SCHREIBEN SIE DIE ECHTE REALITÄT:
+              1. Der Betreiber selbst erhebt, speichert und verarbeitet KEINERLEI personenbezogene Daten von Nutzern (weder Namen, noch Nutzungsdaten oder Telemetrie). Es gibt keine Benutzerkonten, keine Kontaktformulare und keine Cookies.
+              2. Technische Bereitstellung / Hosting: Beim rein technischen Laden der Webseite über das Internet verarbeitet ausschließlich der Webserver des Hosters (z. B. GitHub Pages / GitHub Inc.) automatisch Server-Logfiles (IP-Adresse, Datum, Uhrzeit, Browser), um die Seite technisch fehlerfrei auszuliefern (Art. 6 Abs. 1 lit. f DSGVO). Der Betreiber dieser Seite speichert diese Daten nicht selbst.
+              3. Lokale Verarbeitung: Alle Berechnungen oder Datei-Operationen finden ausschließlich lokal im Webbrowser auf dem Gerät des Nutzers statt.
+
             VERBOT VON PLATZHALTER- & DOPPEL-ABFRAGEN (STAMMDATEN & NUTZUNGSTYP FEST VORGEGEBEN):
             - Der Nutzungstyp des Projekts steht bereits unumstößlich fest: ${isCommercial !== false ? 'Kommerziell / Gewerblich' : 'Rein privat / hobbymäßig (komplett gratis)'}!
             - Fragen Sie den Benutzer NIEMALS: "Wird das Projekt rein privat betrieben oder hat es einen geschäftlichen/gewerblichen Hintergrund?" oder ähnliches! Das ist bereits fest im Projekt hinterlegt und absolut tabu als Frage!
@@ -220,14 +232,15 @@ export class LegalGenChatService {
 
         // Fallback: KI hat den Text direkt als Markdown formatiert ausgegeben (ohne XML-Tags)
         const hasFullDatenschutz =
-            (text.includes('# Datenschutzerklärung') || text.includes('**Datenschutzerklärung**') || text.includes('## 1. Verantwortlicher') || text.includes('Verantwortlicher im Sinne')) &&
-            (text.includes('Rechte der betroffenen') || text.includes('Ihre Rechte') || text.includes('DSGVO')) &&
-            text.length > 500;
+            (text.includes('Datenschutzerklärung') || text.includes('Verantwortlicher im Sinne') || text.includes('verantwortliche Stelle')) &&
+            (text.includes('DSGVO') || text.includes('Datenschutz')) &&
+            (text.includes('Auskunft') || text.includes('Löschung') || text.includes('Rechte') || text.includes('Hosting') || text.includes('Server')) &&
+            text.length > 350;
 
         const hasFullImpressum =
-            (text.includes('# Impressum') || text.includes('**Impressum**') || text.includes('Angaben gemäß § 5 DDG') || text.includes('Angaben gemäß § 5 TMG')) &&
-            (text.includes('Kontakt') || text.includes('E-Mail:')) &&
-            text.length > 250;
+            (text.includes('Impressum') || text.includes('Angaben gemäß § 5') || text.includes('§ 5 DDG') || text.includes('§ 5 TMG')) &&
+            (text.includes('Kontakt') || text.includes('E-Mail') || text.includes('Verantwortlich')) &&
+            text.length > 200;
 
         if (this.documentMode === 'datenschutz' && hasFullDatenschutz) return true;
         if (this.documentMode === 'impressum' && hasFullImpressum) return true;
@@ -245,23 +258,26 @@ export class LegalGenChatService {
 
         // Falls die XML-Tags weggelassen wurden, aber der Text einen vollständigen Entwurf darstellt
         if (!rawImpressum && !rawDatenschutz) {
+            // Bereinige eventuelle <OPTIONS>-Tags am Ende
+            const cleanText = text.replace(/<OPTIONS>[\s\S]*?<\/OPTIONS>/gi, '').trim();
+
             if (this.documentMode === 'impressum') {
-                rawImpressum = text.trim();
+                rawImpressum = cleanText;
             } else if (this.documentMode === 'datenschutz') {
-                rawDatenschutz = text.trim();
+                rawDatenschutz = cleanText;
             } else {
-                if (text.includes('Datenschutzerklärung') && text.includes('Impressum')) {
-                    const dsIdx = text.search(/(?:#+|\*\*)\s*Datenschutzerklärung/i);
+                if (cleanText.includes('Datenschutzerklärung') && cleanText.includes('Impressum')) {
+                    const dsIdx = cleanText.search(/(?:#+|\*\*)\s*Datenschutzerklärung/i);
                     if (dsIdx > 0) {
-                        rawImpressum = text.slice(0, dsIdx).trim();
-                        rawDatenschutz = text.slice(dsIdx).trim();
+                        rawImpressum = cleanText.slice(0, dsIdx).trim();
+                        rawDatenschutz = cleanText.slice(dsIdx).trim();
                     } else {
-                        rawDatenschutz = text.trim();
+                        rawDatenschutz = cleanText;
                     }
-                } else if (text.includes('Datenschutzerklärung')) {
-                    rawDatenschutz = text.trim();
-                } else if (text.includes('Impressum')) {
-                    rawImpressum = text.trim();
+                } else if (cleanText.includes('Datenschutzerklärung')) {
+                    rawDatenschutz = cleanText;
+                } else if (cleanText.includes('Impressum')) {
+                    rawImpressum = cleanText;
                 }
             }
         }
