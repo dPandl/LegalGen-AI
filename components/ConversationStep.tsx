@@ -86,15 +86,6 @@ export const ConversationStep: React.FC<ChatViewProps> = ({
                         <span className="app-crumb-sep">&rsaquo;</span>
                         <span className="app-crumb-current">KI-Generator: {projectName}</span>
                     </nav>
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="modal-btn-secondary inline-flex items-center gap-1.5 !py-1.5 !px-3.5 !text-xs !rounded-full"
-                        title="Chat beenden und zurück zur Projektübersicht"
-                    >
-                        <ArrowLeftIcon className="w-3.5 h-3.5" />
-                        <span>Abbrechen</span>
-                    </button>
                 </div>
             </div>
 
@@ -214,6 +205,16 @@ export const ConversationStep: React.FC<ChatViewProps> = ({
                     </button>
                 </div>
             </div>
+
+            <button
+                type="button"
+                onClick={onCancel}
+                className="app-back"
+                aria-label="Zurück"
+            >
+                <ArrowLeftIcon className="w-5 h-5 shrink-0" />
+                <span className="app-back-text">Abbrechen</span>
+            </button>
         </div>
     );
 };
