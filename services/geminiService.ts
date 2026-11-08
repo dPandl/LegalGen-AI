@@ -118,6 +118,67 @@ export class LegalGenChatService {
             Fragen Sie NIEMALS nach Design, UX, Programmierung, Zeitplan, Budget, Prioritäten oder allgemeinen Projektzielen! Das ist absolut verboten!
             Jede einzelne Frage MUSS sich direkt und ausschließlich auf rechtliche Pflichtangaben für Impressum oder Datenschutzerklärung beziehen (z. B. Hosting-Provider, Kontaktformulare, Cookies/Tracking, Analysetools, Newsletter).
 
+            STRIKTE QUALITÄTS- & STRUKTUR-VORGABEN FÜR DIE RECHTSTEXTE:
+
+            AUFBAU-BLUEPRINT FÜR DIE DATENSCHUTZERKLÄRUNG (Art. 13 DSGVO & TDDDG):
+            Wenn das Projekt eine clientseitige Web-App, Entwickler-Tools, GitHub-Pages-Seite oder Software ohne eigenes Tracking/Backend ist, MUSS die Datenschutzerklärung exakt dieser modernen, sauberen und wahrheitsgemäßen Struktur folgen:
+
+            # Datenschutzerklärung
+
+            ## 1. Verantwortlicher
+            Verantwortlicher im Sinne der Datenschutz-Grundverordnung (DSGVO) und des Digitale-Dienste-Gesetzes (DDG):
+            ${profile.name || 'Pascal Pander'}
+            ${profile.street || ''}
+            ${profile.zipCode || ''} ${profile.city || ''}
+            E-Mail: ${profile.email || ''}
+
+            ## 2. Bereitstellung der Website und Server-Logfiles (Hosting)
+            Unsere Website bzw. Web-App wird über **GitHub Pages** (Dienst der GitHub Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA – Tochtergesellschaft der Microsoft Corporation) bereitgestellt.
+            Beim Aufruf der Website erfasst der Webserver des Hosters automatisch technische Informationen in Server-Logfiles (IP-Adresse, Datum/Uhrzeit, abgerufene Datei, Browsertyp, Betriebssystem).
+            - Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der technisch fehlerfreien Bereitstellung, Systemsicherheit und Stabilität).
+            - Datenübermittlung in die USA: GitHub Inc. bzw. Microsoft Corporation ist nach dem **EU-U.S. Data Privacy Framework (DPF)** zertifiziert. Für Übermittlungen an DPF-zertifizierte US-Unternehmen besteht ein rechtsgültiger Angemessenheitsbeschluss der Europäischen Kommission (Art. 45 DSGVO).
+            - WICHTIG: Behaupten Sie NIEMALS die veraltete Unwahrheit „die USA sind kein sicherer Drittstaat“!
+
+            ## 3. Kein eigener Backend-Server, kein Tracking, keine Datenerfassung durch den Betreiber
+            Wir als Betreiber dieser Website bzw. Web-App erheben, speichern und verarbeiten **keinerlei personenbezogene Daten**:
+            - Es gibt **keine Benutzerkonten** und keine Registrierung.
+            - Es werden **keine Kontaktformulare** oder Chat-Widgets angeboten.
+            - Es werden **keinerlei Tracking-, Analyse- oder Marketing-Tools** (wie Google Analytics, Matomo etc.) eingesetzt.
+            - Es sind **keine Social-Media-Plugins** oder Werbenetzwerke eingebunden.
+            - Alle Berechnungen und Datenverarbeitungen finden ausschließlich **lokal im Webbrowser auf dem Endgerät des Nutzers** statt. Es werden keine Telemetriedaten übertragen.
+
+            ## 4. Cookies und lokale Speicherung
+            - **Keine Cookies:** Diese Website verwendet keine zustimmungspflichtigen oder nicht-notwendigen Cookies.
+            - **Lokale Speicherung (localStorage / IndexedDB):** Soweit die Anwendung Einstellungen oder Verläufe lokal im Browser speichert, erfolgt dies ausschließlich über die Web-Storage-Technologie auf Ihrer Endeinrichtung (§ 25 Abs. 2 Nr. 2 TDDDG – technisch erforderlich, keine Übertragung an Server).
+
+            ## 5. Rechte der betroffenen Personen
+            Ihnen stehen nach der DSGVO folgende Rechte zu:
+            - **Auskunftsrecht (Art. 15 DSGVO):** Recht auf Auskunft über Ihre verarbeiteten Daten.
+            - **Berichtigungsrecht (Art. 16 DSGVO):** Recht auf Berichtigung unrichtiger Daten.
+            - **Löschungsrecht (Art. 17 DSGVO):** Recht auf Löschung („Recht auf Vergessenwerden“).
+            - **Einschränkung der Verarbeitung (Art. 18 DSGVO)**
+            - **Widerspruchsrecht (Art. 21 DSGVO):** Recht auf Widerspruch gegen Verarbeitungen gem. Art. 6 Abs. 1 lit. f DSGVO.
+            - **Beschwerderecht (Art. 77 DSGVO):** Recht auf Beschwerde bei einer Datenschutz-Aufsichtsbehörde.
+
+            ## 6. Stand der Datenschutzerklärung
+            Stand: ${currentMonthYear}
+
+            AUFBAU-BLUEPRINT FÜR DAS IMPRESSUM (§ 5 DDG):
+            # Impressum
+
+            ## Angaben gemäß § 5 Digitale-Dienste-Gesetz (DDG)
+            ${profile.name || 'Pascal Pander'}
+            ${profile.street || ''}
+            ${profile.zipCode || ''} ${profile.city || ''}
+
+            ## Kontakt
+            E-Mail: ${profile.email || ''}
+            ${profile.phone ? `Telefon: ${profile.phone}` : ''}
+
+            ${profile.entityType === 'company' && profile.representative ? `## Vertreten durch:\n${profile.representative}\n` : ''}
+            ${profile.ustId ? `## Umsatzsteuer-Identifikationsnummer gemäß § 27a UStG:\n${profile.ustId}\n` : ''}
+            ${isCommercial !== false ? `## Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV:\n${profile.name || ''}\n${profile.street || ''}\n${profile.zipCode || ''} ${profile.city || ''}\n` : ''}
+
             STRIKTE REGEL FÜR DATENSPARSAME TOOLS & STATISCHE SEITEN (KEIN BACKEND / KEIN TRACKING):
             Wenn laut Quellcode-Analyse KEINE Tracking-Tools, keine externen Datenbanken, keine Backend-Server und keine Kontaktformulare vorhanden sind (z. B. Entwickler-Tools, statische HTML-Seiten, GitHub Pages, Desktop-Tools):
             - VERBOTEN: Schreiben Sie NIEMALS falsche Standard-Floskeln wie:
@@ -351,10 +412,17 @@ ${hasProfileData ? `- Nennen Sie die Stammdaten des Benutzers (${this.userProfil
 
     async sendMessage(message: string): Promise<string> {
         return await this.executeWithFallback(async () => {
-            const hasProfileData = Boolean(this.userProfile?.name && this.userProfile?.email);
-            const profileReminder = hasProfileData
-                ? `\n\n[SYSTEM-REMINDER AN DAS MODELL: Die Profil-Stammdaten liegen BEREITS VOLLSTÄNDIG vor und MÜSSEN direkt verwendet werden: Name="${this.userProfile.name}", Anschrift="${this.userProfile.street || ''}, ${this.userProfile.zipCode || ''} ${this.userProfile.city || ''}", E-Mail="${this.userProfile.email || ''}". Nutzungstyp=${this.isCommercial !== false ? 'Kommerziell' : 'Gratis/Privat'}. Fragen Sie NIEMALS nach Name, Adresse, E-Mail, privat/gewerblich oder Platzhaltern! Bieten Sie direkt die Erstellung an oder erstellen Sie die Texte.]`
-                : '';
+            const profileReminder = `\n\n[SYSTEM-REMINDER AN DAS MODELL:
+1. Profil-Stammdaten: Name="${this.userProfile?.name || 'Pascal Pander'}", Anschrift="${this.userProfile?.street || ''}, ${this.userProfile?.zipCode || ''} ${this.userProfile?.city || ''}", E-Mail="${this.userProfile?.email || ''}". Nutzungstyp=${this.isCommercial !== false ? 'Kommerziell' : 'Gratis/Privat'}.
+2. QUALITÄTS-REGEL FÜR DATENSCHUTZ: Dies ist ein datensparsames Projekt ohne eigenes Backend und ohne Tracking! Behaupten Sie NIEMALS: „unsere IT-Systeme erfassen Daten“ oder „USA ist kein sicherer Drittstaat“ (das EU-U.S. Data Privacy Framework gilt!). Stellen Sie klar, dass der Betreiber selbst KEINERLEI personenbezogene Daten erhebt/speichert und nur der Webhoster (GitHub Pages) technisch bedingte Server-Logfiles verarbeitet.
+3. Wenn der Entwurf fertig ist oder der Benutzer die Erstellung wünscht, geben Sie die finalen Dokumente in den XML-Tags aus:
+<IMPRESSUM_FINAL>
+[Vollständiges Impressum nach § 5 DDG]
+</IMPRESSUM_FINAL>
+
+<DATENSCHUTZ_FINAL>
+[Vollständige Datenschutzerklärung gem. obigem Blueprint]
+</DATENSCHUTZ_FINAL>]`;
 
             const promptMessage = `${message}${profileReminder}`;
 
