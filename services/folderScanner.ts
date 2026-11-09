@@ -319,8 +319,55 @@ function htmlToMarkdown(html: string): string {
     return str.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-function cleanJsxToMarkdown(jsx: string): string {
-    let str = jsx.replace(/<[A-Za-z0-9_]+(?:\s+[^>]*?)?>/g, (tag) => {
+function cleanJsxToMarkdown(code: string): string {
+    // 1. Wenn es sich um eine React-Komponente handelt, extrahiere den JSX-Return-Teil anhand balancierter Klammern
+    let body = code;
+    const returnIdx = code.search(/return\s*\(/i);
+    if (returnIdx !== -1) {
+        const startParen = code.indexOf('(', returnIdx);
+        let depth = 1;
+        let endParen = -1;
+        for (let i = startParen + 1; i < code.length; i++) {
+            if (code[i] === '(') depth++;
+            else if (code[i] === ')') {
+                depth--;
+                if (depth === 0) {
+                    endParen = i;
+                    break;
+                }
+            }
+        }
+        if (endParen !== -1) {
+            body = code.slice(startParen + 1, endParen);
+        }
+    } else {
+        const templateMatch = code.match(/<template>([\s\S]+?)<\/template>/i);
+        if (templateMatch && templateMatch[1]) {
+            body = templateMatch[1];
+        }
+    }
+
+    // 2. Entferne Style-Tags, Script-Tags und Template-Style-Blöcke wie {` @keyframes ... `}
+    body = body.replace(/\{\s*`[\s\S]*?`\s*\}/g, '');
+    body = body.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
+    body = body.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+
+    // 3. Entferne typische UI-Buttons (z.B. Modal-Schließen-Buttons) und Icons (svg, Lucide Icons)
+    body = body.replace(/<button\b[^>]*>[\s\S]*?<\/button>/gi, '');
+    body = body.replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, '');
+    body = body.replace(/<[A-Za-z0-9_]+\s+size=\{[^}]*\}\s*\/>/gi, '');
+
+    // 4. Entferne JSX-Kommentare und JS-Code-Fragmente
+    body = body.replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, '');
+    body = body.replace(/\/\*[\s\S]*?\*\//g, '');
+    body = body.replace(/\/\/.*/g, '');
+
+    // 5. Entferne Inline-Eventhandler und Code-Ausdrücke in Props
+    body = body.replace(/\b(?:onClick|onChange|onSubmit|onKeyDown|onClose)\s*=\s*\{[\s\S]*?\}/gi, '');
+    body = body.replace(/\{[^{}]*(?:stopPropagation|preventDefault|useState|useRef)[^{}]*\}/gi, '');
+
+    // 6. JSX-Tags in Markdown umwandeln
+    let str = body.replace(/<[A-Za-z0-9_]+(?:\s+[^>]*?)?>/g, (tag) => {
         const tagNameMatch = tag.match(/<([A-Za-z0-9_]+)/);
         const tagName = tagNameMatch ? tagNameMatch[1].toLowerCase() : '';
         if (tagName === 'h1') return '\n# ';
@@ -341,11 +388,32 @@ function cleanJsxToMarkdown(jsx: string): string {
         if (tagName === 'strong' || tagName === 'b') return '**';
         return '';
     });
+
+    // 7. Platzhalter-Strings in JSX wie {' '} oder {"\n"} bereinigen
     str = str.replace(/\{\s*['"]\s*['"]\s*\}/g, ' ');
     str = str.replace(/\{\s*['"](.*?)['"]\s*\}/g, '$1');
-    str = str.replace(/\/\*[\s\S]*?\*\//g, '');
-    str = str.replace(/\/\/.*/g, '');
-    return str.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+
+    // 8. Eventuelle HTML-Entities dekodieren
+    str = str
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&sect;/g, '§');
+
+    // 9. Doppelte Markdown-Hashes bereinigen (z.B. wenn jemand <h2>## Titel</h2> geschrieben hat)
+    str = str.replace(/(?:^|\n)(#{1,4})\s*(?:#{1,4}\s*)+/g, '\n$1 ');
+
+    // 10. Falls die Komponente mit Wrapper-Code startet, schneide ab dem ersten echten Rechtstext-Header ab
+    const legalStartMatch = str.search(/(?:^|\n)\s*(?:#{1,3}\s*(?:Impressum|Imprint|Datenschutzerklärung|Datenschutzhinweise|Privacy|Angaben\s+gemäß\s+§\s*5)|\*\*1\.\s*Verantwortlicher)/i);
+    if (legalStartMatch !== -1) {
+        str = str.slice(legalStartMatch);
+    }
+
+    const lines = str.split('\n').map(l => l.trim()).filter(Boolean);
+    return lines.join('\n\n');
 }
 
 function extractSectionFromMarkdown(md: string, type: 'impressum' | 'datenschutz'): string | null {
@@ -513,13 +581,42 @@ function extractObjectByKeyword(code: string, pattern: string): any {
     }
 }
 
+function isRealLegalDocument(text: string, type: 'impressum' | 'datenschutz'): boolean {
+    if (!text || text.trim().length < 40) return false;
+
+    // Ausschluss von JavaScript/TypeScript/JSX-Code
+    const hasCodeSignatures =
+        /^\s*(?:import\s|export\s|const\s|let\s|var\s|function\s|class\s|<\?php)/m.test(text) ||
+        /\b(?:document\.(?:createElement|getElementById|body)|window\.(?:location|navigator)|setTimeout|setInterval)\b/.test(text) ||
+        /\b(?:onClick|onChange|className=|style=\{\{|return\s*\()/m.test(text) ||
+        /\$\{[^}]+\}/.test(text) || // Template-String-Interpolation wie ${origin}${pathname}
+        /<(?:div|span|button|h[1-6]|p|input|form)\b/i.test(text); // Ungeparstes JSX/HTML im Code
+
+    if (hasCodeSignatures) {
+        return false;
+    }
+
+    if (type === 'impressum') {
+        const hasHeader = /(?:#+|\*\*)\s*(?:Impressum|Imprint)/i.test(text) ||
+                          /\b(?:Angaben\s+gemäß\s+§\s*5|§\s*5\s*DDG|§\s*5\s*TMG)\b/i.test(text);
+        const hasLegalContext = /\b(?:Kontakt|E-Mail|Verantwortlich|Vertreten\s+durch)\b/i.test(text);
+        return Boolean(hasHeader && hasLegalContext);
+    } else {
+        const hasHeader = /(?:#+|\*\*)\s*(?:Datenschutzerklärung|Datenschutzhinweise|Privacy\s+Policy)/i.test(text) ||
+                          /\b(?:Verantwortlicher\s+im\s+Sinne|Verantwortliche\s+Stelle)\b/i.test(text);
+        const hasLegalContext = /\b(?:DSGVO|Datenschutz-Grundverordnung|TDDDG|Art\.\s*13|Art\.\s*6)\b/i.test(text);
+        const hasRightsOrHosting = /\b(?:Rechte\s+der\s+betroffenen|Betroffenenrechte|Auskunftsrecht|Hosting|Server-Logfiles|Speicherdauer)\b/i.test(text);
+        return Boolean(hasHeader && hasLegalContext && hasRightsOrHosting);
+    }
+}
+
 function extractLegalTextFromCode(code: string, type: 'impressum' | 'datenschutz'): string | null {
     if (type === 'impressum') {
         // 0. Suche nach exportierten Objekten (z.B. IMPRESSUM_DATA = { ... })
         const obj = extractObjectByKeyword(code, '(?:IMPRESSUM|IMPRINT)');
         if (obj && typeof obj === 'object') {
             const md = formatStructuredLegalObjectToMarkdown(obj);
-            if (md && md.length > 30) {
+            if (md && isRealLegalDocument(md, 'impressum')) {
                 return md;
             }
         }
@@ -528,39 +625,24 @@ function extractLegalTextFromCode(code: string, type: 'impressum' | 'datenschutz
         const backtickMatch = code.match(
             /(?:export\s+)?(?:const|let|var)\s+([A-Za-z0-9_]*(?:IMPRESSUM|IMPRINT)[A-Za-z0-9_]*)\s*(?::\s*string)?\s*=\s*`([\s\S]+?)`;/i
         );
-        if (backtickMatch && backtickMatch[2] && backtickMatch[2].trim().length > 30) {
-            return backtickMatch[2].trim();
+        if (backtickMatch && backtickMatch[2]) {
+            const trimmed = backtickMatch[2].trim();
+            if (isRealLegalDocument(trimmed, 'impressum')) return trimmed;
         }
 
         // 2. Suche nach Single/Double-Quote-Konstante
         const quoteMatch = code.match(
             /(?:export\s+)?(?:const|let|var)\s+([A-Za-z0-9_]*(?:IMPRESSUM|IMPRINT)[A-Za-z0-9_]*)\s*(?::\s*string)?\s*=\s*(["'])([\s\S]+?)\2;/i
         );
-        if (quoteMatch && quoteMatch[3] && quoteMatch[3].trim().length > 30) {
-            return quoteMatch[3].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\'/g, "'").trim();
+        if (quoteMatch && quoteMatch[3]) {
+            const cleaned = quoteMatch[3].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\'/g, "'").trim();
+            if (isRealLegalDocument(cleaned, 'impressum')) return cleaned;
         }
 
-        // 3. Suche nach beliebigem Backtick-String, der mit **Impressum** oder Angaben gemäß § 5 anfängt
-        const contentMatch = code.match(/`(\s*(?:\*{1,2}|#+)?\s*Impressum[\s\S]+?)`/i);
-        if (contentMatch && contentMatch[1] && contentMatch[1].trim().length > 40) {
-            return contentMatch[1].trim();
-        }
-
-        const ddgMatch = code.match(/`([\s\S]*?Angaben\s+gemäß\s+§\s*5[\s\S]+?)`/i);
-        if (ddgMatch && ddgMatch[1] && ddgMatch[1].trim().length > 40) {
-            return ddgMatch[1].trim();
-        }
-
-        // 4. JSX / Template-Markup in React/Vue/Svelte-Komponenten
+        // 3. JSX / Template-Markup in React/Vue/Svelte-Komponenten
         if (/return\s*\(|<template>/i.test(code)) {
             const parsedJsx = cleanJsxToMarkdown(code);
-            // Strikte Prüfung: Es muss sich tatsächlich um ein Impressum handeln (niemals auf generisches 'kontakt' matchen!)
-            const isActualImpressum =
-                /(?:#+|\*\*)\s*(?:Impressum|Imprint)/i.test(parsedJsx) ||
-                /\b(?:Angaben\s+gemäß\s+§\s*5|§\s*5\s*DDG|§\s*5\s*TMG)\b/i.test(parsedJsx) ||
-                (/\b(?:Impressum|Imprint)\b/i.test(parsedJsx) && /\b(?:Vertreten\s+durch|Umsatzsteuer-Identifikationsnummer|Haftungsausschluss|Verantwortlich\s+für\s+den\s+Inhalt)\b/i.test(parsedJsx));
-
-            if (parsedJsx.length > 80 && isActualImpressum) {
+            if (isRealLegalDocument(parsedJsx, 'impressum')) {
                 return parsedJsx;
             }
         }
@@ -570,7 +652,7 @@ function extractLegalTextFromCode(code: string, type: 'impressum' | 'datenschutz
         const obj = extractObjectByKeyword(code, '(?:DATENSCHUTZ|PRIVACY)');
         if (obj && typeof obj === 'object') {
             const md = formatStructuredLegalObjectToMarkdown(obj);
-            if (md && md.length > 50) {
+            if (md && isRealLegalDocument(md, 'datenschutz')) {
                 return md;
             }
         }
@@ -579,39 +661,24 @@ function extractLegalTextFromCode(code: string, type: 'impressum' | 'datenschutz
         const backtickMatch = code.match(
             /(?:export\s+)?(?:const|let|var)\s+([A-Za-z0-9_]*(?:DATENSCHUTZ|PRIVACY)[A-Za-z0-9_]*)\s*(?::\s*string)?\s*=\s*`([\s\S]+?)`;/i
         );
-        if (backtickMatch && backtickMatch[2] && backtickMatch[2].trim().length > 50) {
-            return backtickMatch[2].trim();
+        if (backtickMatch && backtickMatch[2]) {
+            const trimmed = backtickMatch[2].trim();
+            if (isRealLegalDocument(trimmed, 'datenschutz')) return trimmed;
         }
 
         // 2. Single/Double Quote
         const quoteMatch = code.match(
             /(?:export\s+)?(?:const|let|var)\s+([A-Za-z0-9_]*(?:DATENSCHUTZ|PRIVACY)[A-Za-z0-9_]*)\s*(?::\s*string)?\s*=\s*(["'])([\s\S]+?)\2;/i
         );
-        if (quoteMatch && quoteMatch[3] && quoteMatch[3].trim().length > 50) {
-            return quoteMatch[3].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\'/g, "'").trim();
+        if (quoteMatch && quoteMatch[3]) {
+            const cleaned = quoteMatch[3].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\'/g, "'").trim();
+            if (isRealLegalDocument(cleaned, 'datenschutz')) return cleaned;
         }
 
-        // 3. Beliebiger Backtick-String, der mit **Datenschutzerklärung** oder 1. Verantwortlicher anfängt
-        const contentMatch = code.match(/`(\s*(?:\*{1,2}|#+)?\s*(?:Datenschutzerklärung|Datenschutzhinweise|Privacy\s+Policy)[\s\S]+?)`/i);
-        if (contentMatch && contentMatch[1] && contentMatch[1].trim().length > 60) {
-            return contentMatch[1].trim();
-        }
-
-        const gdprMatch = code.match(/`([\s\S]*?(?:Verantwortlicher\s+im\s+Sinne|Art\.\s*6\s+Abs\.\s*1|DSGVO)[\s\S]+?)`/i);
-        if (gdprMatch && gdprMatch[1] && gdprMatch[1].trim().length > 100) {
-            return gdprMatch[1].trim();
-        }
-
-        // 4. JSX / Template-Markup in React/Vue/Svelte-Komponenten
+        // 3. JSX / Template-Markup in React/Vue/Svelte-Komponenten
         if (/return\s*\(|<template>/i.test(code)) {
             const parsedJsx = cleanJsxToMarkdown(code);
-            // Strikte Prüfung: Es muss sich tatsächlich um eine Datenschutzerklärung handeln!
-            const isActualDatenschutz =
-                /(?:#+|\*\*)\s*(?:Datenschutzerklärung|Datenschutzhinweise|Privacy\s+Policy)/i.test(parsedJsx) ||
-                (/\b(?:Datenschutzerklärung|Privacy\s+Policy)\b/i.test(parsedJsx) && /\b(?:Verantwortlicher|Betroffenenrechte|Widerruf|Art\.\s*6|DSGVO)\b/i.test(parsedJsx)) ||
-                (/\b(?:DSGVO|Datenschutz-Grundverordnung|TDDDG)\b/i.test(parsedJsx) && /\b(?:Verantwortlicher\s+im\s+Sinne|Rechte\s+der\s+betroffenen\s+Personen|Auskunftsrecht)\b/i.test(parsedJsx));
-
-            if (parsedJsx.length > 100 && isActualDatenschutz) {
+            if (isRealLegalDocument(parsedJsx, 'datenschutz')) {
                 return parsedJsx;
             }
         }

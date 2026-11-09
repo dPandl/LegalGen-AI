@@ -587,11 +587,17 @@ export default function App() {
         }
     }, [projects]);
 
+    const isCodeOrDirtyText = (txt?: string) => {
+        if (!txt) return false;
+        return /^\s*(?:import\s|interface\s|export\s|<\?php)/m.test(txt) ||
+               /\b(?:return\s*\(|onClick|className=|style=\{\{)\b/.test(txt);
+    };
+
     // Automatisches Nachladen von erkannten Rechtstexten für lokal verknüpfte Projekte
     const checkedDocsProjectIdsRef = useRef<Set<string>>(new Set());
     useEffect(() => {
         const candidateProjects = projects.filter(
-            p => p.projectPath && (!p.impressum || !p.datenschutzerklaerung) && !checkedDocsProjectIdsRef.current.has(p.id)
+            p => p.projectPath && (!p.impressum || !p.datenschutzerklaerung || isCodeOrDirtyText(p.impressum) || isCodeOrDirtyText(p.datenschutzerklaerung)) && !checkedDocsProjectIdsRef.current.has(p.id)
         );
         if (candidateProjects.length === 0) return;
 
@@ -608,8 +614,12 @@ export default function App() {
                     if (scan && (scan.detectedImpressum || scan.detectedDatenschutz)) {
                         updatedList = updatedList.map(item => {
                             if (item.id === proj.id) {
-                                const newImp = item.impressum || scan.detectedImpressum || '';
-                                const newDs = item.datenschutzerklaerung || scan.detectedDatenschutz || '';
+                                const newImp = (isCodeOrDirtyText(item.impressum) && scan.detectedImpressum)
+                                    ? scan.detectedImpressum
+                                    : (item.impressum || scan.detectedImpressum || '');
+                                const newDs = (isCodeOrDirtyText(item.datenschutzerklaerung) && scan.detectedDatenschutz)
+                                    ? scan.detectedDatenschutz
+                                    : (item.datenschutzerklaerung || scan.detectedDatenschutz || '');
                                 if (newImp !== item.impressum || newDs !== item.datenschutzerklaerung) {
                                     hasChanges = true;
                                     return {
@@ -659,8 +669,8 @@ export default function App() {
                             detectedServices: scan.detectedServices,
                             codeAnalysisSummary: scan.codeAnalysisSummary || p.codeAnalysisSummary,
                             iconDataUrl: scan.iconDataUrl || p.iconDataUrl,
-                            impressum: p.impressum || scan.detectedImpressum || '',
-                            datenschutzerklaerung: p.datenschutzerklaerung || scan.detectedDatenschutz || ''
+                            impressum: scan.detectedImpressum || (isCodeOrDirtyText(p.impressum) ? '' : p.impressum) || '',
+                            datenschutzerklaerung: scan.detectedDatenschutz || (isCodeOrDirtyText(p.datenschutzerklaerung) ? '' : p.datenschutzerklaerung) || ''
                         };
                     }
                     return p;
@@ -1080,8 +1090,12 @@ export default function App() {
                             detectedServices: scanUpdate.detectedServices,
                             codeAnalysisSummary: scanUpdate.codeAnalysisSummary || p.codeAnalysisSummary,
                             iconDataUrl: scanUpdate.iconDataUrl || p.iconDataUrl,
-                            impressum: p.impressum || scanUpdate.detectedImpressum || '',
-                            datenschutzerklaerung: p.datenschutzerklaerung || scanUpdate.detectedDatenschutz || ''
+                            impressum: (isCodeOrDirtyText(p.impressum) && scanUpdate.detectedImpressum)
+                                ? scanUpdate.detectedImpressum
+                                : (p.impressum || scanUpdate.detectedImpressum || ''),
+                            datenschutzerklaerung: (isCodeOrDirtyText(p.datenschutzerklaerung) && scanUpdate.detectedDatenschutz)
+                                ? scanUpdate.detectedDatenschutz
+                                : (p.datenschutzerklaerung || scanUpdate.detectedDatenschutz || '')
                         });
                     } else if (!p.projectPath) {
                         // Manuelles Projekt ohne Ordnerpfad bleibt erhalten
@@ -1102,8 +1116,12 @@ export default function App() {
                         detectedServices: scanUpdate.detectedServices,
                         codeAnalysisSummary: scanUpdate.codeAnalysisSummary || p.codeAnalysisSummary,
                         iconDataUrl: scanUpdate.iconDataUrl || p.iconDataUrl,
-                        impressum: p.impressum || scanUpdate.detectedImpressum || '',
-                        datenschutzerklaerung: p.datenschutzerklaerung || scanUpdate.detectedDatenschutz || ''
+                        impressum: (isCodeOrDirtyText(p.impressum) && scanUpdate.detectedImpressum)
+                            ? scanUpdate.detectedImpressum
+                            : (p.impressum || scanUpdate.detectedImpressum || ''),
+                        datenschutzerklaerung: (isCodeOrDirtyText(p.datenschutzerklaerung) && scanUpdate.detectedDatenschutz)
+                            ? scanUpdate.detectedDatenschutz
+                            : (p.datenschutzerklaerung || scanUpdate.detectedDatenschutz || '')
                     };
                 });
                 finalProjectList = [...newProjectsToCreate, ...updatedList];

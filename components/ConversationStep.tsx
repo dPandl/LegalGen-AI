@@ -178,9 +178,9 @@ export const ConversationStep: React.FC<ChatViewProps> = ({
                             </span>
                             <div className="rounded-2xl px-4 py-3 bg-white text-slate-800 border border-slate-100 rounded-tl-sm shadow-sm flex items-center gap-3">
                                 <div className="flex items-center justify-center gap-1.5 shrink-0">
-                                    <span className="h-2 w-2 bg-primary-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                                    <span className="h-2 w-2 bg-primary-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                                    <span className="h-2 w-2 bg-primary-500 rounded-full animate-bounce"></span>
+                                    <span className="h-2 w-2 bg-primary-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                    <span className="h-2 w-2 bg-primary-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                    <span className="h-2 w-2 bg-primary-600 rounded-full animate-bounce"></span>
                                 </div>
                                 <span className="text-xs text-slate-500">Antwort wird formuliert…</span>
                             </div>
